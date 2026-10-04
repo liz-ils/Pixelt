@@ -1,0 +1,23 @@
+# Rust / Cargo
+/target/
+src-tauri/target/
+**/*.rs.bk
+
+# Node / frontend
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Env (secrets) - never commit
+.env
+.env.*
+
+# IDE
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
