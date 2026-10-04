@@ -363,8 +363,3 @@ progress[hidden] {
 .theme-name {
   font-weight: 600;
 }
-
-.theme-desc {
-  font-size: 12px;
-  color: var(--text-secondary);
-}
