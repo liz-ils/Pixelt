@@ -27,6 +27,7 @@
           <option value="bmp">BMP (.bmp)</option>
           <option value="tiff">TIFF (.tiff)</option>
           <option value="qoi">QOI (.qoi)</option>
+          <option value="avif">AVIF (.avif)</option>
         </select>
       </div>
 
@@ -46,6 +47,27 @@
       </div>
 
       <p id="result"></p>
+
+      <h2>一括変換</h2>
+      <p>形式と品質は上の設定を使います。</p>
+
+      <div class="row">
+        <span id="batch-info">未選択</span>
+        <button id="btn-batch-inputs" type="button">複数選択</button>
+      </div>
+
+      <div class="row">
+        <input id="batch-dir" readonly placeholder="出力フォルダ..." />
+        <button id="btn-batch-dir" type="button">参照</button>
+      </div>
+
+      <div class="row">
+        <label for="overwrite">上書きする</label>
+        <input id="overwrite" type="checkbox" />
+        <button id="btn-batch" type="button">一括変換</button>
+      </div>
+
+      <p id="batch-result"></p>
     </main>
   </body>
 </html>
