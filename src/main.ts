@@ -28,6 +28,21 @@ interface BatchProgress {
   current: string;
 }
 
+interface PreviewImage {
+  data_url: string;
+  width: number;
+  height: number;
+  full_width: number;
+  full_height: number;
+}
+
+interface MosaicRegion {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 const THEME_KEY = "pixelt-theme";
 const THEMES = ["dads-light", "dads-dark", "contrast"] as const;
 
@@ -238,4 +253,218 @@ window.addEventListener("DOMContentLoaded", () => {
         document.getElementById(btn.dataset.target ?? "")?.classList.add("active");
       });
     });
+
+  const mosaicInputEl = pick<HTMLInputElement>("#mosaic-input");
+  const mosaicOutputEl = pick<HTMLInputElement>("#mosaic-output");
+  const mosaicFormatEl = pick<HTMLSelectElement>("#mosaic-format");
+  const mosaicQualityEl = pick<HTMLInputElement>("#mosaic-quality");
+  const mosaicQualityValueEl = pick<HTMLElement>("#mosaic-quality-value");
+  const mosaicSizeEl = pick<HTMLInputElement>("#mosaic-size");
+  const mosaicSizeValueEl = pick<HTMLElement>("#mosaic-size-value");
+  const mosaicCanvas = pick<HTMLCanvasElement>("#mosaic-canvas");
+  const mosaicInfoEl = pick<HTMLElement>("#mosaic-info");
+  const mosaicResultEl = pick<HTMLElement>("#mosaic-result");
+  const mosaicCtx = mosaicCanvas.getContext("2d");
+  if (!mosaicCtx) {
+    throw new Error("canvas 2d context を取得できません");
+  }
+  const mctx: CanvasRenderingContext2D = mosaicCtx;
+
+  let previewImg: HTMLImageElement | null = null;
+  let previewScale = 1;
+  const mosaicRegions: MosaicRegion[] = [];
+  let dragStart: { x: number; y: number } | null = null;
+  let dragCurrent: { x: number; y: number } | null = null;
+  let brushing = false;
+
+  mosaicQualityEl.addEventListener("input", () => {
+    mosaicQualityValueEl.textContent = mosaicQualityEl.value;
+  });
+  mosaicSizeEl.addEventListener("input", () => {
+    mosaicSizeValueEl.textContent = mosaicSizeEl.value;
+  });
+
+  function mosaicTool(): string {
+    return (
+      document.querySelector<HTMLInputElement>('input[name="mosaic-tool"]:checked')?.value ??
+      "rect"
+    );
+  }
+
+  function renderMosaic(): void {
+    if (!previewImg) {
+      return;
+    }
+    mctx.clearRect(0, 0, mosaicCanvas.width, mosaicCanvas.height);
+    mctx.drawImage(previewImg, 0, 0);
+    mctx.fillStyle = "rgba(52, 96, 251, 0.3)";
+    mctx.strokeStyle = "#3460fb";
+    mctx.lineWidth = 2;
+    for (const r of mosaicRegions) {
+      mctx.fillRect(r.x, r.y, r.width, r.height);
+      mctx.strokeRect(r.x, r.y, r.width, r.height);
+    }
+    if (dragStart && dragCurrent) {
+      const x = Math.min(dragStart.x, dragCurrent.x);
+      const y = Math.min(dragStart.y, dragCurrent.y);
+      mctx.strokeRect(x, y, Math.abs(dragStart.x - dragCurrent.x), Math.abs(dragStart.y - dragCurrent.y));
+    }
+    mosaicInfoEl.textContent = `${mosaicRegions.length}件の領域を選択中`;
+  }
+
+  function toPreview(e: MouseEvent): { x: number; y: number } {
+    const rect = mosaicCanvas.getBoundingClientRect();
+    return {
+      x: ((e.clientX - rect.left) * mosaicCanvas.width) / rect.width,
+      y: ((e.clientY - rect.top) * mosaicCanvas.height) / rect.height,
+    };
+  }
+
+  function dab(p: { x: number; y: number }): void {
+    const size = Number(mosaicSizeEl.value);
+    mosaicRegions.push({
+      x: Math.round(p.x - size / 2),
+      y: Math.round(p.y - size / 2),
+      width: size,
+      height: size,
+    });
+    renderMosaic();
+  }
+
+  mosaicCanvas.addEventListener("mousedown", (e) => {
+    if (!previewImg) {
+      return;
+    }
+    if (mosaicTool() === "brush") {
+      brushing = true;
+      dab(toPreview(e));
+    } else {
+      dragStart = toPreview(e);
+      dragCurrent = null;
+    }
+  });
+
+  mosaicCanvas.addEventListener("mousemove", (e) => {
+    if (!previewImg) {
+      return;
+    }
+    if (brushing) {
+      dab(toPreview(e));
+    } else if (dragStart) {
+      dragCurrent = toPreview(e);
+      renderMosaic();
+    }
+  });
+
+  window.addEventListener("mouseup", () => {
+    if (brushing) {
+      brushing = false;
+      return;
+    }
+    if (dragStart && dragCurrent) {
+      const w = Math.abs(dragStart.x - dragCurrent.x);
+      const h = Math.abs(dragStart.y - dragCurrent.y);
+      if (w >= 4 && h >= 4) {
+        mosaicRegions.push({
+          x: Math.round(Math.min(dragStart.x, dragCurrent.x)),
+          y: Math.round(Math.min(dragStart.y, dragCurrent.y)),
+          width: Math.round(w),
+          height: Math.round(h),
+        });
+      }
+    }
+    dragStart = null;
+    dragCurrent = null;
+    renderMosaic();
+  });
+
+  pick("#btn-mosaic-undo").addEventListener("click", () => {
+    mosaicRegions.pop();
+    renderMosaic();
+  });
+
+  pick("#btn-mosaic-clear").addEventListener("click", () => {
+    mosaicRegions.length = 0;
+    renderMosaic();
+  });
+
+  pick("#btn-mosaic-input").addEventListener("click", async () => {
+    const selected = await open({
+      multiple: false,
+      filters: [{ name: "画像", extensions: INPUT_EXTENSIONS }],
+    });
+    if (typeof selected !== "string") {
+      return;
+    }
+    mosaicInputEl.value = selected;
+    mosaicRegions.length = 0;
+    try {
+      const p = await invoke<PreviewImage>("load_preview", {
+        input: selected,
+        maxSize: 640,
+      });
+      previewScale = p.full_width / p.width;
+      const img = new Image();
+      img.onload = () => {
+        previewImg = img;
+        mosaicCanvas.width = p.width;
+        mosaicCanvas.height = p.height;
+        renderMosaic();
+      };
+      img.src = p.data_url;
+    } catch (e) {
+      mosaicInfoEl.textContent = `プレビューの読み込みに失敗しました: ${String(e)}`;
+    }
+  });
+
+  pick("#btn-mosaic-output").addEventListener("click", async () => {
+    const ext = formatExtension(mosaicFormatEl.value);
+    const selected = await save({
+      filters: [{ name: "画像", extensions: [ext] }],
+    });
+    if (typeof selected === "string") {
+      mosaicOutputEl.value = selected;
+    }
+  });
+
+  pick("#btn-mosaic-apply").addEventListener("click", async () => {
+    const btn = pick<HTMLButtonElement>("#btn-mosaic-apply");
+    mosaicResultEl.textContent = "";
+    mosaicResultEl.classList.remove("error");
+    if (!mosaicInputEl.value || !mosaicOutputEl.value) {
+      mosaicResultEl.textContent = "入力と出力を指定してください。";
+      mosaicResultEl.classList.add("error");
+      return;
+    }
+    if (mosaicRegions.length === 0) {
+      mosaicResultEl.textContent = "モザイク範囲を選択してください。";
+      mosaicResultEl.classList.add("error");
+      return;
+    }
+    btn.disabled = true;
+    mosaicResultEl.textContent = "適用中...";
+    try {
+      const regions = mosaicRegions.map((r) => ({
+        x: Math.round(r.x * previewScale),
+        y: Math.round(r.y * previewScale),
+        width: Math.round(r.width * previewScale),
+        height: Math.round(r.height * previewScale),
+      }));
+      const r = await invoke<ConvertResult>("apply_mosaic", {
+        input: mosaicInputEl.value,
+        output: mosaicOutputEl.value,
+        format: mosaicFormatEl.value,
+        quality: Number(mosaicQualityEl.value),
+        regions,
+        pixelSize: Number(mosaicSizeEl.value),
+      });
+      mosaicResultEl.textContent =
+        `${regions.length}件適用 / ${r.width}x${r.height} / ${formatKB(r.input_bytes)} → ${formatKB(r.output_bytes)} → ${r.output_path}`;
+    } catch (e) {
+      mosaicResultEl.textContent = `モザイク適用に失敗しました: ${String(e)}`;
+      mosaicResultEl.classList.add("error");
+    } finally {
+      btn.disabled = false;
+    }
+  });
 });

@@ -27,7 +27,7 @@ use serde::Serialize;
 use tauri::Emitter;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum OutputFormat {
+pub(crate) enum OutputFormat {
     Jpeg,
     Png,
     WebP,
@@ -39,7 +39,7 @@ enum OutputFormat {
 }
 
 impl OutputFormat {
-    fn parse(s: &str) -> Result<Self, String> {
+    pub(crate) fn parse(s: &str) -> Result<Self, String> {
         match s.trim().to_ascii_lowercase().as_str() {
             "jpg" | "jpeg" => Ok(Self::Jpeg),
             "png" => Ok(Self::Png),
@@ -53,7 +53,7 @@ impl OutputFormat {
         }
     }
 
-    fn extension(self) -> &'static str {
+    pub(crate) fn extension(self) -> &'static str {
         match self {
             Self::Jpeg => "jpg",
             Self::Png => "png",
@@ -91,7 +91,7 @@ pub struct BatchResult {
 }
 
 /// EXIF Orientation を読み、表示通りの向きに回転・反転する。
-fn normalize_orientation(img: DynamicImage, bytes: &[u8]) -> DynamicImage {
+pub(crate) fn normalize_orientation(img: DynamicImage, bytes: &[u8]) -> DynamicImage {
     let orientation = exif_orientation(bytes).unwrap_or(1);
     apply_orientation(img, orientation)
 }
@@ -121,7 +121,7 @@ fn apply_orientation(img: DynamicImage, orientation: u32) -> DynamicImage {
     }
 }
 
-fn encode(img: &DynamicImage, format: OutputFormat, quality: u8) -> Result<Vec<u8>, String> {
+pub(crate) fn encode(img: &DynamicImage, format: OutputFormat, quality: u8) -> Result<Vec<u8>, String> {
     let (width, height) = (img.width(), img.height());
     let mut buf = Vec::new();
     match format {
