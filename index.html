@@ -25,9 +25,9 @@
         <button class="nav-item" data-target="view-batch" type="button">一括変換</button>
         <button class="nav-item" data-target="view-mosaic" type="button">モザイク</button>
         <button class="nav-item" data-target="view-resize" type="button">リサイズ</button>
+        <button class="nav-item" data-target="view-watermark" type="button">透かし</button>
         <button class="nav-item" data-target="view-settings" type="button">設定</button>
         <div class="nav-group">今後</div>
-        <button class="nav-item" type="button" disabled>透かし <span class="badge">予定</span></button>
         <button class="nav-item" type="button" disabled>メタデータ <span class="badge">予定</span></button>
       </nav>
 
@@ -244,6 +244,114 @@
           </div>
 
           <p id="resize-result" class="result"></p>
+        </section>
+
+        <section id="view-watermark" class="view">
+          <h1>透かし</h1>
+          <p class="view-desc">文字または画像を重ねます。文字にはフォントファイル（TTF/OTF）を指定します。</p>
+
+          <div class="card">
+            <div class="card-title">入力</div>
+            <div class="row">
+              <input id="wm-input" readonly placeholder="入力ファイル..." />
+              <button id="btn-wm-input" type="button">参照</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">透かし内容</div>
+            <div class="row">
+              <label><input type="radio" name="wm-mode" value="text" checked /> 文字</label>
+              <label><input type="radio" name="wm-mode" value="image" /> 画像</label>
+            </div>
+            <div id="wm-text-group">
+              <div class="row">
+                <label for="wm-text">文字</label>
+                <input id="wm-text" type="text" value="Pixelt" />
+              </div>
+              <div class="row">
+                <input id="wm-font" readonly placeholder="フォントファイル (TTF/OTF)..." />
+                <button id="btn-wm-font" type="button">参照</button>
+              </div>
+              <div class="row">
+                <label for="wm-size">サイズ</label>
+                <input id="wm-size" type="range" min="8" max="256" value="48" />
+                <span id="wm-size-value">48</span>
+              </div>
+              <div class="row">
+                <label for="wm-color">色</label>
+                <input id="wm-color" type="color" value="#ffffff" />
+              </div>
+            </div>
+            <div id="wm-image-group" hidden>
+              <div class="row">
+                <input id="wm-image" readonly placeholder="透かし画像..." />
+                <button id="btn-wm-image" type="button">参照</button>
+              </div>
+              <div class="row">
+                <label for="wm-scale">縮小</label>
+                <input id="wm-scale" type="range" min="1" max="100" value="20" />
+                <span id="wm-scale-value">20</span>
+              </div>
+              <p class="hint">幅に対する割合（%）に縮小して重ねます。</p>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">配置</div>
+            <div class="row">
+              <label for="wm-position">位置</label>
+              <select id="wm-position">
+                <option value="top-left">左上</option>
+                <option value="top-center">上中央</option>
+                <option value="top-right">右上</option>
+                <option value="middle-left">左中央</option>
+                <option value="center">中央</option>
+                <option value="middle-right">右中央</option>
+                <option value="bottom-left">左下</option>
+                <option value="bottom-center">下中央</option>
+                <option value="bottom-right" selected>右下</option>
+              </select>
+            </div>
+            <div class="row">
+              <label for="wm-margin">余白</label>
+              <input id="wm-margin" type="number" min="0" value="16" />
+              <label for="wm-opacity">不透明度</label>
+              <input id="wm-opacity" type="range" min="1" max="100" value="80" />
+              <span id="wm-opacity-value">80</span>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">出力</div>
+            <div class="row">
+              <label for="wm-format">形式</label>
+              <select id="wm-format">
+                <option value="jpeg">JPEG (.jpg)</option>
+                <option value="png">PNG (.png)</option>
+                <option value="webp">WebP (.webp)</option>
+                <option value="gif">GIF (.gif)</option>
+                <option value="bmp">BMP (.bmp)</option>
+                <option value="tiff">TIFF (.tiff)</option>
+                <option value="qoi">QOI (.qoi)</option>
+                <option value="avif">AVIF (.avif)</option>
+              </select>
+            </div>
+            <div class="row">
+              <label for="wm-quality">品質</label>
+              <input id="wm-quality" type="range" min="1" max="100" value="85" />
+              <span id="wm-quality-value">85</span>
+            </div>
+            <div class="row">
+              <input id="wm-output" readonly placeholder="出力ファイル..." />
+              <button id="btn-wm-output" type="button">保存先</button>
+            </div>
+            <div class="row">
+              <button id="btn-wm-apply" class="primary" type="button">適用して保存</button>
+            </div>
+          </div>
+
+          <p id="wm-result" class="result"></p>
         </section>
 
         <section id="view-settings" class="view">

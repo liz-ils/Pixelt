@@ -214,7 +214,7 @@ window.addEventListener("DOMContentLoaded", () => {
     try {
       const r = await invoke<BatchResult>("convert_batch", {
         inputs: batchInputs,
-        outputDir: batchDirEl.value,
+        output_dir: batchDirEl.value,
         format: batchFormatEl.value,
         quality: Number(batchQualityEl.value),
         overwrite: pick<HTMLInputElement>("#overwrite").checked,
@@ -297,6 +297,158 @@ window.addEventListener("DOMContentLoaded", () => {
     } catch (e) {
       resizeResultEl.textContent = `リサイズに失敗しました: ${String(e)}`;
       resizeResultEl.classList.add("error");
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  function wmMode(): string {
+    return (
+      document.querySelector<HTMLInputElement>('input[name="wm-mode"]:checked')?.value ??
+      "text"
+    );
+  }
+
+  function refreshWmGroups(): void {
+    const isText = wmMode() === "text";
+    pick("#wm-text-group").hidden = !isText;
+    pick("#wm-image-group").hidden = isText;
+  }
+
+  document
+    .querySelectorAll<HTMLInputElement>('input[name="wm-mode"]')
+    .forEach((radio) => {
+      radio.addEventListener("change", refreshWmGroups);
+    });
+  refreshWmGroups();
+
+  const wmInputEl = pick<HTMLInputElement>("#wm-input");
+  const wmOutputEl = pick<HTMLInputElement>("#wm-output");
+  const wmFormatEl = pick<HTMLSelectElement>("#wm-format");
+  const wmQualityEl = pick<HTMLInputElement>("#wm-quality");
+  const wmQualityValueEl = pick<HTMLElement>("#wm-quality-value");
+  const wmResultEl = pick<HTMLElement>("#wm-result");
+
+  wmQualityEl.addEventListener("input", () => {
+    wmQualityValueEl.textContent = wmQualityEl.value;
+  });
+
+  const wmSizeEl = pick<HTMLInputElement>("#wm-size");
+  const wmSizeValueEl = pick<HTMLElement>("#wm-size-value");
+  wmSizeEl.addEventListener("input", () => {
+    wmSizeValueEl.textContent = wmSizeEl.value;
+  });
+
+  const wmScaleEl = pick<HTMLInputElement>("#wm-scale");
+  const wmScaleValueEl = pick<HTMLElement>("#wm-scale-value");
+  wmScaleEl.addEventListener("input", () => {
+    wmScaleValueEl.textContent = wmScaleEl.value;
+  });
+
+  const wmOpacityEl = pick<HTMLInputElement>("#wm-opacity");
+  const wmOpacityValueEl = pick<HTMLElement>("#wm-opacity-value");
+  wmOpacityEl.addEventListener("input", () => {
+    wmOpacityValueEl.textContent = wmOpacityEl.value;
+  });
+
+  pick("#btn-wm-input").addEventListener("click", async () => {
+    const selected = await open({
+      multiple: false,
+      filters: [{ name: "画像", extensions: INPUT_EXTENSIONS }],
+    });
+    if (typeof selected === "string") {
+      wmInputEl.value = selected;
+    }
+  });
+
+  pick("#btn-wm-font").addEventListener("click", async () => {
+    const selected = await open({
+      multiple: false,
+      filters: [{ name: "フォント", extensions: ["ttf", "otf"] }],
+    });
+    if (typeof selected === "string") {
+      pick<HTMLInputElement>("#wm-font").value = selected;
+    }
+  });
+
+  pick("#btn-wm-image").addEventListener("click", async () => {
+    const selected = await open({
+      multiple: false,
+      filters: [{ name: "画像", extensions: INPUT_EXTENSIONS }],
+    });
+    if (typeof selected === "string") {
+      pick<HTMLInputElement>("#wm-image").value = selected;
+    }
+  });
+
+  pick("#btn-wm-output").addEventListener("click", async () => {
+    const ext = formatExtension(wmFormatEl.value);
+    const selected = await save({
+      filters: [{ name: "画像", extensions: [ext] }],
+    });
+    if (typeof selected === "string") {
+      wmOutputEl.value = selected;
+    }
+  });
+
+  function hexToRgb(hex: string): [number, number, number] {
+    const m = /^#([0-9a-f]{6})$/i.exec(hex.trim());
+    if (!m) {
+      return [255, 255, 255];
+    }
+    const v = parseInt(m[1], 16);
+    return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
+  }
+
+  pick("#btn-wm-apply").addEventListener("click", async () => {
+    const btn = pick<HTMLButtonElement>("#btn-wm-apply");
+    wmResultEl.textContent = "";
+    wmResultEl.classList.remove("error");
+    if (!wmInputEl.value || !wmOutputEl.value) {
+      wmResultEl.textContent = "入力と出力を指定してください。";
+      wmResultEl.classList.add("error");
+      return;
+    }
+    const isText = wmMode() === "text";
+    const fontPath = pick<HTMLInputElement>("#wm-font").value;
+    const imagePath = pick<HTMLInputElement>("#wm-image").value;
+    const text = pick<HTMLInputElement>("#wm-text").value;
+    if ((isText && (!text || !fontPath)) || (!isText && !imagePath)) {
+      wmResultEl.textContent = "透かしの内容を指定してください。";
+      wmResultEl.classList.add("error");
+      return;
+    }
+    btn.disabled = true;
+    wmResultEl.textContent = "適用中...";
+    try {
+      const watermark = isText
+        ? {
+            kind: "text",
+            text,
+            font_path: fontPath,
+            size: Number(wmSizeEl.value),
+            color: hexToRgb(pick<HTMLInputElement>("#wm-color").value),
+          }
+        : {
+            kind: "image",
+            path: imagePath,
+            scale: Number(wmScaleEl.value) / 100,
+          };
+      const r = await invoke<ConvertResult>("apply_watermark", {
+        input: wmInputEl.value,
+        output: wmOutputEl.value,
+        format: wmFormatEl.value,
+        quality: Number(wmQualityEl.value),
+        watermark,
+        position: pick<HTMLSelectElement>("#wm-position").value,
+        margin: Math.max(0, Number(pick<HTMLInputElement>("#wm-margin").value)),
+        opacity: Number(wmOpacityEl.value) / 100,
+      });
+      wmResultEl.textContent =
+        `${r.width}x${r.height} / ${formatKB(r.input_bytes)} → ${formatKB(r.output_bytes)} → ${r.output_path}`;
+    } catch (e) {
+      wmResultEl.textContent = `透かしの適用に失敗しました: ${String(e)}`;
+      wmResultEl.classList.add("error");
     } finally {
       btn.disabled = false;
     }
@@ -464,7 +616,7 @@ window.addEventListener("DOMContentLoaded", () => {
     try {
       const p = await invoke<PreviewImage>("load_preview", {
         input: selected,
-        maxSize: 640,
+        max_size: 640,
       });
       previewScale = p.full_width / p.width;
       const img = new Image();
@@ -519,7 +671,7 @@ window.addEventListener("DOMContentLoaded", () => {
         format: mosaicFormatEl.value,
         quality: Number(mosaicQualityEl.value),
         regions,
-        pixelSize: Number(mosaicSizeEl.value),
+        pixel_size: Number(mosaicSizeEl.value),
       });
       mosaicResultEl.textContent =
         `${regions.length}件適用 / ${r.width}x${r.height} / ${formatKB(r.input_bytes)} → ${formatKB(r.output_bytes)} → ${r.output_path}`;
