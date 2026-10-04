@@ -1,46 +1,79 @@
-/* Fluent (WinUI) 風テーマ。トークンは CSS 変数に集約し、
-   将来 @fluentui/web-components に置き換えやすい構成にする。 */
+/* DADS（デジタル庁デザインシステム）基準の青基調テーマ。
+   プリミティブ: Blue-800 #0031d8 / Blue-900 #0017c1 / Blue-50 #e8f1fe
+   テーマは data-theme で切替（dads-light / dads-dark / contrast）。
+   将来 @fluentui/web-components に置き換えやすいようトークンは変数に集約。 */
+
+:root,
+:root[data-theme="dads-light"] {
+  --accent: #0031d8;
+  --accent-hover: #0017c1;
+  --accent-active: #00118f;
+  --accent-text: #ffffff;
+  --accent-soft: #e8f1fe;
+  --bg: #f2f2f2;
+  --card: #ffffff;
+  --text: #1a1a1a;
+  --text-secondary: #767676;
+  --border: #cccccc;
+  --control: #ffffff;
+  --control-border: #767676;
+  --nav-active: #e8f1fe;
+  --error: #ce0000;
+  --success: #197a4b;
+  --shadow: 0 2px 8px 1px rgba(0, 0, 0, 0.1), 0 1px 5px 0 rgba(0, 0, 0, 0.3);
+}
+
+:root[data-theme="dads-dark"] {
+  --accent: #3460fb;
+  --accent-hover: #4979f5;
+  --accent-active: #7096f8;
+  --accent-text: #ffffff;
+  --accent-soft: #00234b;
+  --bg: #1a1a1a;
+  --card: #333333;
+  --text: #ffffff;
+  --text-secondary: #cccccc;
+  --border: #666666;
+  --control: #333333;
+  --control-border: #999999;
+  --nav-active: rgba(112, 150, 248, 0.2);
+  --error: #ff7171;
+  --success: #51b883;
+  --shadow: 0 2px 8px 1px rgba(0, 0, 0, 0.4), 0 1px 5px 0 rgba(0, 0, 0, 0.5);
+}
+
+:root[data-theme="contrast"] {
+  --accent: #ffd43d;
+  --accent-hover: #ffe380;
+  --accent-active: #ffd43d;
+  --accent-text: #000000;
+  --accent-soft: #333333;
+  --bg: #000000;
+  --card: #000000;
+  --text: #ffffff;
+  --text-secondary: #ffffff;
+  --border: #ffffff;
+  --control: #000000;
+  --control-border: #ffffff;
+  --nav-active: #333333;
+  --error: #ff9696;
+  --success: #9bd4b5;
+  --shadow: none;
+}
 
 :root {
-  --accent: #0078d4;
-  --accent-hover: #106ebe;
-  --accent-text: #ffffff;
-  --bg: #f3f3f3;
-  --card: #fdfdfd;
-  --text: #1b1b1b;
-  --text-secondary: #616161;
-  --border: #e1e1e1;
-  --control: #ffffff;
-  --control-border: #8a8a8a;
-  --nav-active: rgba(0, 0, 0, 0.06);
   --radius-control: 4px;
   --radius-card: 8px;
-  --font: "Segoe UI Variable", "Segoe UI", "Yu Gothic UI", sans-serif;
+  --font: "Segoe UI Variable", "Segoe UI", "Yu Gothic UI", "Noto Sans JP", sans-serif;
 
   font-family: var(--font);
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.6;
   color: var(--text);
   background-color: var(--bg);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --accent: #60cdff;
-    --accent-hover: #4fb3e8;
-    --accent-text: #000000;
-    --bg: #202020;
-    --card: #2b2b2b;
-    --text: #ffffff;
-    --text-secondary: #a7a7a7;
-    --border: #3a3a3a;
-    --control: #2d2d2d;
-    --control-border: #9a9a9a;
-    --nav-active: rgba(255, 255, 255, 0.08);
-  }
 }
 
 * {
@@ -51,25 +84,31 @@ body {
   margin: 0;
 }
 
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .app {
   display: flex;
   min-height: 100vh;
 }
 
-/* 左ナビ (WinUI 設定アプリ風) */
+/* 左ナビ */
 .nav {
-  width: 220px;
+  width: 248px;
   flex-shrink: 0;
-  padding: 12px 8px;
+  padding: 20px 12px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
 }
 
 .app-title {
-  font-size: 15px;
-  font-weight: 600;
-  padding: 8px 12px 12px;
+  font-size: 16px;
+  font-weight: 700;
+  padding: 8px 16px 20px;
+  color: var(--accent);
 }
 
 .nav-item {
@@ -77,7 +116,7 @@ body {
   display: block;
   width: 100%;
   text-align: left;
-  padding: 8px 12px 8px 16px;
+  padding: 10px 12px 10px 20px;
   border: none;
   border-radius: var(--radius-control);
   background: transparent;
@@ -90,12 +129,17 @@ body {
   background: var(--nav-active);
 }
 
+.nav-item.active {
+  background: var(--nav-active);
+  font-weight: 600;
+}
+
 .nav-item.active::before {
   content: "";
   position: absolute;
-  left: 4px;
-  top: 8px;
-  bottom: 8px;
+  left: 6px;
+  top: 10px;
+  bottom: 10px;
   width: 3px;
   border-radius: 2px;
   background: var(--accent);
@@ -110,29 +154,35 @@ body {
 .nav-group {
   font-size: 12px;
   color: var(--text-secondary);
-  padding: 12px 12px 4px;
+  padding: 20px 16px 6px;
 }
 
 .badge {
   font-size: 11px;
-  padding: 1px 8px;
+  padding: 2px 10px;
   border-radius: 10px;
   border: 1px solid var(--border);
   color: var(--text-secondary);
-  margin-left: 4px;
+  margin-left: 6px;
 }
 
 /* 本文 */
 .content {
   flex: 1;
-  padding: 20px 28px 28px;
+  padding: 32px 44px 44px;
   min-width: 0;
+  max-width: 860px;
 }
 
 .content h1 {
-  font-size: 20px;
-  font-weight: 600;
-  margin: 4px 0 16px;
+  font-size: 26px;
+  font-weight: 700;
+  margin: 0 0 8px;
+}
+
+.view-desc {
+  color: var(--text-secondary);
+  margin: 0 0 28px;
 }
 
 .view {
@@ -147,20 +197,24 @@ body {
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
-  padding: 16px;
-  margin-bottom: 12px;
+  box-shadow: var(--shadow);
+  padding: 24px;
+  margin-bottom: 20px;
 }
 
 .card-title {
-  font-weight: 600;
-  margin-bottom: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  padding-left: 12px;
+  border-left: 4px solid var(--accent);
 }
 
 .row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: 12px;
+  margin-bottom: 14px;
 }
 
 .row:last-child {
@@ -168,7 +222,7 @@ body {
 }
 
 .row label {
-  min-width: 48px;
+  min-width: 56px;
   color: var(--text-secondary);
 }
 
@@ -179,7 +233,7 @@ input[readonly] {
   min-width: 0;
 }
 
-input:not([type="range"]):not([type="checkbox"]),
+input:not([type="range"]):not([type="checkbox"]):not([type="radio"]),
 select,
 button {
   font: inherit;
@@ -187,12 +241,11 @@ button {
   border-radius: var(--radius-control);
 }
 
-input:not([type="range"]):not([type="checkbox"]),
+input:not([type="range"]):not([type="checkbox"]):not([type="radio"]),
 select {
-  padding: 6px 10px;
+  padding: 8px 12px;
   background: var(--control);
   border: 1px solid var(--control-border);
-  border-bottom-width: 2px;
 }
 
 input[readonly] {
@@ -200,7 +253,7 @@ input[readonly] {
 }
 
 button {
-  padding: 6px 16px;
+  padding: 8px 20px;
   background: var(--control);
   border: 1px solid var(--border);
   cursor: pointer;
@@ -211,21 +264,35 @@ button:not(:disabled):hover {
   background: var(--nav-active);
 }
 
+button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 button.primary {
   background: var(--accent);
   border-color: var(--accent);
   color: var(--accent-text);
+  font-weight: 600;
 }
 
 button.primary:not(:disabled):hover {
   background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+button.primary:not(:disabled):active {
+  background: var(--accent-active);
+  border-color: var(--accent-active);
 }
 
 input[type="range"] {
   accent-color: var(--accent);
+  flex: 1;
 }
 
-input[type="checkbox"] {
+input[type="checkbox"],
+input[type="radio"] {
   accent-color: var(--accent);
   width: 16px;
   height: 16px;
@@ -234,10 +301,70 @@ input[type="checkbox"] {
 .hint {
   font-size: 12px;
   color: var(--text-secondary);
-  margin: 8px 0 0;
+  margin: 12px 0 0;
 }
 
 .result {
   white-space: pre-line;
   font-size: 13px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 16px 20px;
+  min-height: 52px;
+}
+
+.result:empty {
+  display: none;
+}
+
+.result.error {
+  color: var(--error);
+  border-color: var(--error);
+}
+
+progress {
+  width: 100%;
+  height: 8px;
+  margin: 12px 0 4px;
+  accent-color: var(--accent);
+}
+
+progress[hidden] {
+  display: none;
+}
+
+.status {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 4px 0 0;
+  min-height: 20px;
+}
+
+.theme-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  margin-bottom: 12px;
+  cursor: pointer;
+}
+
+.theme-option:hover {
+  background: var(--nav-active);
+}
+
+.theme-option input {
+  margin: 0;
+}
+
+.theme-name {
+  font-weight: 600;
+}
+
+.theme-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
 }

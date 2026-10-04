@@ -24,6 +24,7 @@ use image::codecs::{
 use image::{DynamicImage, ExtendedColorType, Frame, ImageEncoder};
 use rayon::prelude::*;
 use serde::Serialize;
+use tauri::Emitter;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum OutputFormat {
@@ -321,9 +322,18 @@ pub async fn convert_image(
     .map_err(|e| format!("変換タスクが中断されました: {e}"))?
 }
 
+#[derive(Debug, Clone, Serialize)]
+struct BatchProgress {
+    done: usize,
+    total: usize,
+    current: String,
+}
+
 /// 複数画像を並列変換する。1件の失敗では全体を止めず、件ごとに結果を返す。
+/// 進捗は `batch-progress` イベントで通知する。
 #[tauri::command]
 pub async fn convert_batch(
+    app: tauri::AppHandle,
     inputs: Vec<String>,
     output_dir: String,
     format: String,
@@ -336,11 +346,26 @@ pub async fn convert_batch(
         return Err(format!("出力ディレクトリが存在しません: {output_dir}"));
     }
     let result = tauri::async_runtime::spawn_blocking(move || {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        let done = AtomicUsize::new(0);
+        let total = inputs.len();
         let mut succeeded = Vec::with_capacity(inputs.len());
         let mut failed = Vec::new();
         let results: Vec<_> = inputs
             .par_iter()
-            .map(|input| convert_one(input, &output_dir, format, quality, overwrite))
+            .map(|input| {
+                let r = convert_one(input, &output_dir, format, quality, overwrite);
+                let n = done.fetch_add(1, Ordering::SeqCst) + 1;
+                let _ = app.emit(
+                    "batch-progress",
+                    BatchProgress {
+                        done: n,
+                        total,
+                        current: input.clone(),
+                    },
+                );
+                r
+            })
             .collect();
         for (input, result) in inputs.iter().zip(results) {
             match result {

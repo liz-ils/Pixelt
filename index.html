@@ -5,6 +5,15 @@
     <link rel="stylesheet" href="/src/styles.css" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Pixelt</title>
+    <script>
+      try {
+        document.documentElement.dataset.theme =
+          localStorage.getItem("pixelt-theme") ||
+          (matchMedia("(prefers-color-scheme: dark)").matches ? "dads-dark" : "dads-light");
+      } catch (e) {
+        document.documentElement.dataset.theme = "dads-light";
+      }
+    </script>
     <script type="module" src="/src/main.ts" defer></script>
   </head>
 
@@ -14,6 +23,7 @@
         <div class="app-title">Pixelt</div>
         <button class="nav-item active" data-target="view-convert" type="button">変換</button>
         <button class="nav-item" data-target="view-batch" type="button">一括変換</button>
+        <button class="nav-item" data-target="view-settings" type="button">設定</button>
         <div class="nav-group">今後</div>
         <button class="nav-item" type="button" disabled>リサイズ <span class="badge">予定</span></button>
         <button class="nav-item" type="button" disabled>透かし <span class="badge">予定</span></button>
@@ -23,6 +33,7 @@
       <main class="content">
         <section id="view-convert" class="view active">
           <h1>変換</h1>
+          <p class="view-desc">1ファイルを別形式に変換します。</p>
 
           <div class="card">
             <div class="card-title">入力</div>
@@ -71,13 +82,35 @@
 
         <section id="view-batch" class="view">
           <h1>一括変換</h1>
-          <p class="hint">形式と品質は「変換」の設定を使います。</p>
+          <p class="view-desc">複数ファイルをまとめて変換します。形式と品質はここで指定します。</p>
 
           <div class="card">
             <div class="card-title">入力</div>
             <div class="row">
               <span id="batch-info">未選択</span>
               <button id="btn-batch-inputs" type="button">複数選択</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">設定</div>
+            <div class="row">
+              <label for="batch-format">形式</label>
+              <select id="batch-format">
+                <option value="jpeg">JPEG (.jpg)</option>
+                <option value="png">PNG (.png)</option>
+                <option value="webp">WebP (.webp)</option>
+                <option value="gif">GIF (.gif)</option>
+                <option value="bmp">BMP (.bmp)</option>
+                <option value="tiff">TIFF (.tiff)</option>
+                <option value="qoi">QOI (.qoi)</option>
+                <option value="avif">AVIF (.avif)</option>
+              </select>
+            </div>
+            <div class="row">
+              <label for="batch-quality">品質</label>
+              <input id="batch-quality" type="range" min="1" max="100" value="85" />
+              <span id="batch-quality-value">85</span>
             </div>
           </div>
 
@@ -92,9 +125,41 @@
               <input id="overwrite" type="checkbox" />
               <button id="btn-batch" class="primary" type="button">一括変換</button>
             </div>
+            <progress id="batch-progress" max="100" value="0" hidden></progress>
+            <p id="batch-status" class="status"></p>
           </div>
 
           <p id="batch-result" class="result"></p>
+        </section>
+
+        <section id="view-settings" class="view">
+          <h1>設定</h1>
+          <p class="view-desc">テーマはすぐに反映され、次回起動時も保持されます。</p>
+
+          <div class="card">
+            <div class="card-title">テーマ</div>
+            <label class="theme-option">
+              <input type="radio" name="theme" value="dads-light" />
+              <span>
+                <span class="theme-name">ライト</span><br />
+                <span class="theme-desc">デジタル庁ブルー基調の明るいテーマ</span>
+              </span>
+            </label>
+            <label class="theme-option">
+              <input type="radio" name="theme" value="dads-dark" />
+              <span>
+                <span class="theme-name">ダーク</span><br />
+                <span class="theme-desc">暗い背景に明るいブルーのテーマ</span>
+              </span>
+            </label>
+            <label class="theme-option">
+              <input type="radio" name="theme" value="contrast" />
+              <span>
+                <span class="theme-name">ハイコントラスト</span><br />
+                <span class="theme-desc">黒背景・黄アクセントの視認性優先テーマ</span>
+              </span>
+            </label>
+          </div>
         </section>
       </main>
     </div>
