@@ -150,4 +150,19 @@ window.addEventListener("DOMContentLoaded", () => {
       batchResultEl.textContent = `一括変換に失敗しました: ${String(e)}`;
     }
   });
+
+  document
+    .querySelectorAll<HTMLButtonElement>(".nav-item[data-target]")
+    .forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document
+          .querySelectorAll(".nav-item")
+          .forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        document
+          .querySelectorAll(".view")
+          .forEach((v) => v.classList.remove("active"));
+        document.getElementById(btn.dataset.target ?? "")?.classList.add("active");
+      });
+    });
 });

@@ -1,116 +1,243 @@
-.logo.vite:hover {
-  filter: drop-shadow(0 0 2em #747bff);
-}
+/* Fluent (WinUI) 風テーマ。トークンは CSS 変数に集約し、
+   将来 @fluentui/web-components に置き換えやすい構成にする。 */
 
-.logo.typescript:hover {
-  filter: drop-shadow(0 0 2em #2d79c7);
-}
 :root {
-  font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
-  font-size: 16px;
-  line-height: 24px;
-  font-weight: 400;
+  --accent: #0078d4;
+  --accent-hover: #106ebe;
+  --accent-text: #ffffff;
+  --bg: #f3f3f3;
+  --card: #fdfdfd;
+  --text: #1b1b1b;
+  --text-secondary: #616161;
+  --border: #e1e1e1;
+  --control: #ffffff;
+  --control-border: #8a8a8a;
+  --nav-active: rgba(0, 0, 0, 0.06);
+  --radius-control: 4px;
+  --radius-card: 8px;
+  --font: "Segoe UI Variable", "Segoe UI", "Yu Gothic UI", sans-serif;
 
-  color: #0f0f0f;
-  background-color: #f6f6f6;
-
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text);
+  background-color: var(--bg);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  -webkit-text-size-adjust: 100%;
-}
-
-.container {
-  margin: 0;
-  padding-top: 10vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  text-align: center;
-}
-
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: 0.75s;
-}
-
-.logo.tauri:hover {
-  filter: drop-shadow(0 0 2em #24c8db);
-}
-
-.row {
-  display: flex;
-  justify-content: center;
-}
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-
-a:hover {
-  color: #535bf2;
-}
-
-h1 {
-  text-align: center;
-}
-
-input,
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  color: #0f0f0f;
-  background-color: #ffffff;
-  transition: border-color 0.25s;
-  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
-}
-
-button {
-  cursor: pointer;
-}
-
-button:hover {
-  border-color: #396cd8;
-}
-button:active {
-  border-color: #396cd8;
-  background-color: #e8e8e8;
-}
-
-input,
-button {
-  outline: none;
-}
-
-#greet-input {
-  margin-right: 5px;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    color: #f6f6f6;
-    background-color: #2f2f2f;
+    --accent: #60cdff;
+    --accent-hover: #4fb3e8;
+    --accent-text: #000000;
+    --bg: #202020;
+    --card: #2b2b2b;
+    --text: #ffffff;
+    --text-secondary: #a7a7a7;
+    --border: #3a3a3a;
+    --control: #2d2d2d;
+    --control-border: #9a9a9a;
+    --nav-active: rgba(255, 255, 255, 0.08);
   }
+}
 
-  a:hover {
-    color: #24c8db;
-  }
+* {
+  box-sizing: border-box;
+}
 
-  input,
-  button {
-    color: #ffffff;
-    background-color: #0f0f0f98;
-  }
-  button:active {
-    background-color: #0f0f0f69;
-  }
+body {
+  margin: 0;
+}
+
+.app {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* 左ナビ (WinUI 設定アプリ風) */
+.nav {
+  width: 220px;
+  flex-shrink: 0;
+  padding: 12px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.app-title {
+  font-size: 15px;
+  font-weight: 600;
+  padding: 8px 12px 12px;
+}
+
+.nav-item {
+  position: relative;
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 12px 8px 16px;
+  border: none;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.nav-item:not(:disabled):hover {
+  background: var(--nav-active);
+}
+
+.nav-item.active::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.nav-item:disabled {
+  cursor: default;
+  color: var(--text-secondary);
+  opacity: 0.7;
+}
+
+.nav-group {
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 12px 12px 4px;
+}
+
+.badge {
+  font-size: 11px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  margin-left: 4px;
+}
+
+/* 本文 */
+.content {
+  flex: 1;
+  padding: 20px 28px 28px;
+  min-width: 0;
+}
+
+.content h1 {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 4px 0 16px;
+}
+
+.view {
+  display: none;
+}
+
+.view.active {
+  display: block;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.card-title {
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.row:last-child {
+  margin-bottom: 0;
+}
+
+.row label {
+  min-width: 48px;
+  color: var(--text-secondary);
+}
+
+.row input[type="text"],
+.row input:not([type]),
+input[readonly] {
+  flex: 1;
+  min-width: 0;
+}
+
+input:not([type="range"]):not([type="checkbox"]),
+select,
+button {
+  font: inherit;
+  color: var(--text);
+  border-radius: var(--radius-control);
+}
+
+input:not([type="range"]):not([type="checkbox"]),
+select {
+  padding: 6px 10px;
+  background: var(--control);
+  border: 1px solid var(--control-border);
+  border-bottom-width: 2px;
+}
+
+input[readonly] {
+  color: var(--text-secondary);
+}
+
+button {
+  padding: 6px 16px;
+  background: var(--control);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+button:not(:disabled):hover {
+  background: var(--nav-active);
+}
+
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+button.primary:not(:disabled):hover {
+  background: var(--accent-hover);
+}
+
+input[type="range"] {
+  accent-color: var(--accent);
+}
+
+input[type="checkbox"] {
+  accent-color: var(--accent);
+  width: 16px;
+  height: 16px;
+}
+
+.hint {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 8px 0 0;
+}
+
+.result {
+  white-space: pre-line;
+  font-size: 13px;
 }
