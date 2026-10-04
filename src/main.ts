@@ -239,6 +239,69 @@ window.addEventListener("DOMContentLoaded", () => {
     }
   });
 
+  const resizeInputEl = pick<HTMLInputElement>("#resize-input");
+  const resizeOutputEl = pick<HTMLInputElement>("#resize-output");
+  const resizeFormatEl = pick<HTMLSelectElement>("#resize-format");
+  const resizeQualityEl = pick<HTMLInputElement>("#resize-quality");
+  const resizeQualityValueEl = pick<HTMLElement>("#resize-quality-value");
+  const resizeWidthEl = pick<HTMLInputElement>("#resize-width");
+  const resizeHeightEl = pick<HTMLInputElement>("#resize-height");
+  const resizeResultEl = pick<HTMLElement>("#resize-result");
+
+  resizeQualityEl.addEventListener("input", () => {
+    resizeQualityValueEl.textContent = resizeQualityEl.value;
+  });
+
+  pick("#btn-resize-input").addEventListener("click", async () => {
+    const selected = await open({
+      multiple: false,
+      filters: [{ name: "画像", extensions: INPUT_EXTENSIONS }],
+    });
+    if (typeof selected === "string") {
+      resizeInputEl.value = selected;
+    }
+  });
+
+  pick("#btn-resize-output").addEventListener("click", async () => {
+    const ext = formatExtension(resizeFormatEl.value);
+    const selected = await save({
+      filters: [{ name: "画像", extensions: [ext] }],
+    });
+    if (typeof selected === "string") {
+      resizeOutputEl.value = selected;
+    }
+  });
+
+  pick("#btn-resize-apply").addEventListener("click", async () => {
+    const btn = pick<HTMLButtonElement>("#btn-resize-apply");
+    resizeResultEl.textContent = "";
+    resizeResultEl.classList.remove("error");
+    if (!resizeInputEl.value || !resizeOutputEl.value) {
+      resizeResultEl.textContent = "入力と出力を指定してください。";
+      resizeResultEl.classList.add("error");
+      return;
+    }
+    btn.disabled = true;
+    resizeResultEl.textContent = "リサイズ中...";
+    try {
+      const r = await invoke<ConvertResult>("resize_image", {
+        input: resizeInputEl.value,
+        output: resizeOutputEl.value,
+        format: resizeFormatEl.value,
+        quality: Number(resizeQualityEl.value),
+        width: Math.max(0, Number(resizeWidthEl.value)),
+        height: Math.max(0, Number(resizeHeightEl.value)),
+      });
+      resizeResultEl.textContent =
+        `${r.width}x${r.height} / ${formatKB(r.input_bytes)} → ${formatKB(r.output_bytes)} → ${r.output_path}`;
+    } catch (e) {
+      resizeResultEl.textContent = `リサイズに失敗しました: ${String(e)}`;
+      resizeResultEl.classList.add("error");
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
   document
     .querySelectorAll<HTMLButtonElement>(".nav-item[data-target]")
     .forEach((btn) => {
