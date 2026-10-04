@@ -9,6 +9,10 @@ dist/
 dist-ssr/
 *.local
 
+# Logs
+logs/
+*.log
+
 # Env (secrets) - never commit
 .env
 .env.*
