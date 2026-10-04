@@ -9,65 +9,94 @@
   </head>
 
   <body>
-    <main class="container">
-      <h1>Pixelt 画像変換</h1>
+    <div class="app">
+      <nav class="nav">
+        <div class="app-title">Pixelt</div>
+        <button class="nav-item active" data-target="view-convert" type="button">変換</button>
+        <button class="nav-item" data-target="view-batch" type="button">一括変換</button>
+        <div class="nav-group">今後</div>
+        <button class="nav-item" type="button" disabled>リサイズ <span class="badge">予定</span></button>
+        <button class="nav-item" type="button" disabled>透かし <span class="badge">予定</span></button>
+        <button class="nav-item" type="button" disabled>メタデータ <span class="badge">予定</span></button>
+      </nav>
 
-      <div class="row">
-        <input id="input-path" readonly placeholder="入力ファイル..." />
-        <button id="btn-input" type="button">参照</button>
-      </div>
+      <main class="content">
+        <section id="view-convert" class="view active">
+          <h1>変換</h1>
 
-      <div class="row">
-        <label for="format-select">形式</label>
-        <select id="format-select">
-          <option value="jpeg">JPEG (.jpg)</option>
-          <option value="png">PNG (.png)</option>
-          <option value="webp">WebP (.webp, ロスレス)</option>
-          <option value="gif">GIF (.gif)</option>
-          <option value="bmp">BMP (.bmp)</option>
-          <option value="tiff">TIFF (.tiff)</option>
-          <option value="qoi">QOI (.qoi)</option>
-          <option value="avif">AVIF (.avif)</option>
-        </select>
-      </div>
+          <div class="card">
+            <div class="card-title">入力</div>
+            <div class="row">
+              <input id="input-path" readonly placeholder="入力ファイル..." />
+              <button id="btn-input" type="button">参照</button>
+            </div>
+          </div>
 
-      <div class="row">
-        <label for="quality">品質 (JPEG/PNG)</label>
-        <input id="quality" type="range" min="1" max="100" value="85" />
-        <span id="quality-value">85</span>
-      </div>
+          <div class="card">
+            <div class="card-title">設定</div>
+            <div class="row">
+              <label for="format-select">形式</label>
+              <select id="format-select">
+                <option value="jpeg">JPEG (.jpg)</option>
+                <option value="png">PNG (.png)</option>
+                <option value="webp">WebP (.webp)</option>
+                <option value="gif">GIF (.gif)</option>
+                <option value="bmp">BMP (.bmp)</option>
+                <option value="tiff">TIFF (.tiff)</option>
+                <option value="qoi">QOI (.qoi)</option>
+                <option value="avif">AVIF (.avif)</option>
+              </select>
+            </div>
+            <div class="row">
+              <label for="quality">品質</label>
+              <input id="quality" type="range" min="1" max="100" value="85" />
+              <span id="quality-value">85</span>
+            </div>
+            <p class="hint">品質は JPEG / WebP / AVIF に直接反映、PNG は圧縮レベルに読替。</p>
+          </div>
 
-      <div class="row">
-        <input id="output-path" readonly placeholder="出力ファイル..." />
-        <button id="btn-output" type="button">保存先</button>
-      </div>
+          <div class="card">
+            <div class="card-title">出力</div>
+            <div class="row">
+              <input id="output-path" readonly placeholder="出力ファイル..." />
+              <button id="btn-output" type="button">保存先</button>
+            </div>
+            <div class="row">
+              <button id="btn-convert" class="primary" type="button">変換</button>
+            </div>
+          </div>
 
-      <div class="row">
-        <button id="btn-convert" type="button">変換</button>
-      </div>
+          <p id="result" class="result"></p>
+        </section>
 
-      <p id="result"></p>
+        <section id="view-batch" class="view">
+          <h1>一括変換</h1>
+          <p class="hint">形式と品質は「変換」の設定を使います。</p>
 
-      <h2>一括変換</h2>
-      <p>形式と品質は上の設定を使います。</p>
+          <div class="card">
+            <div class="card-title">入力</div>
+            <div class="row">
+              <span id="batch-info">未選択</span>
+              <button id="btn-batch-inputs" type="button">複数選択</button>
+            </div>
+          </div>
 
-      <div class="row">
-        <span id="batch-info">未選択</span>
-        <button id="btn-batch-inputs" type="button">複数選択</button>
-      </div>
+          <div class="card">
+            <div class="card-title">出力</div>
+            <div class="row">
+              <input id="batch-dir" readonly placeholder="出力フォルダ..." />
+              <button id="btn-batch-dir" type="button">参照</button>
+            </div>
+            <div class="row">
+              <label for="overwrite">上書きする</label>
+              <input id="overwrite" type="checkbox" />
+              <button id="btn-batch" class="primary" type="button">一括変換</button>
+            </div>
+          </div>
 
-      <div class="row">
-        <input id="batch-dir" readonly placeholder="出力フォルダ..." />
-        <button id="btn-batch-dir" type="button">参照</button>
-      </div>
-
-      <div class="row">
-        <label for="overwrite">上書きする</label>
-        <input id="overwrite" type="checkbox" />
-        <button id="btn-batch" type="button">一括変換</button>
-      </div>
-
-      <p id="batch-result"></p>
-    </main>
+          <p id="batch-result" class="result"></p>
+        </section>
+      </main>
+    </div>
   </body>
 </html>
