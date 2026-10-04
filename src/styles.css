@@ -334,6 +334,14 @@ progress[hidden] {
   display: none;
 }
 
+#mosaic-canvas {
+  max-width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  cursor: crosshair;
+  touch-action: none;
+}
+
 .status {
   font-size: 13px;
   color: var(--text-secondary);
