@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { open, save } from "@tauri-apps/plugin-dialog";
 
 interface ConvertResult {
@@ -19,6 +20,33 @@ interface BatchResult {
   output_dir: string;
   succeeded: ConvertResult[];
   failed: BatchErrorItem[];
+}
+
+interface BatchProgress {
+  done: number;
+  total: number;
+  current: string;
+}
+
+const THEME_KEY = "pixelt-theme";
+const THEMES = ["dads-light", "dads-dark", "contrast"] as const;
+
+function currentTheme(): string {
+  const saved = localStorage.getItem(THEME_KEY);
+  if (saved && (THEMES as readonly string[]).includes(saved)) {
+    return saved;
+  }
+  return matchMedia("(prefers-color-scheme: dark)").matches ? "dads-dark" : "dads-light";
+}
+
+function applyTheme(name: string): void {
+  document.documentElement.dataset.theme = name;
+  localStorage.setItem(THEME_KEY, name);
+  document
+    .querySelectorAll<HTMLInputElement>('input[name="theme"]')
+    .forEach((radio) => {
+      radio.checked = radio.value === name;
+    });
 }
 
 const INPUT_EXTENSIONS = [
@@ -62,6 +90,20 @@ window.addEventListener("DOMContentLoaded", () => {
     qualityValueEl.textContent = qualityEl.value;
   });
 
+  applyTheme(currentTheme());
+  document
+    .querySelectorAll<HTMLInputElement>('input[name="theme"]')
+    .forEach((radio) => {
+      radio.addEventListener("change", () => applyTheme(radio.value));
+    });
+
+  const batchFormatEl = pick<HTMLSelectElement>("#batch-format");
+  const batchQualityEl = pick<HTMLInputElement>("#batch-quality");
+  const batchQualityValueEl = pick<HTMLElement>("#batch-quality-value");
+  batchQualityEl.addEventListener("input", () => {
+    batchQualityValueEl.textContent = batchQualityEl.value;
+  });
+
   pick("#btn-input").addEventListener("click", async () => {
     const selected = await open({
       multiple: false,
@@ -83,11 +125,16 @@ window.addEventListener("DOMContentLoaded", () => {
   });
 
   pick("#btn-convert").addEventListener("click", async () => {
+    const btn = pick<HTMLButtonElement>("#btn-convert");
     resultEl.textContent = "";
+    resultEl.classList.remove("error");
     if (!inputEl.value || !outputEl.value) {
       resultEl.textContent = "入力と出力を指定してください。";
+      resultEl.classList.add("error");
       return;
     }
+    btn.disabled = true;
+    resultEl.textContent = "変換中...";
     try {
       const r = await invoke<ConvertResult>("convert_image", {
         input: inputEl.value,
@@ -100,6 +147,9 @@ window.addEventListener("DOMContentLoaded", () => {
         `${r.width}x${r.height} / ${formatKB(r.input_bytes)} → ${formatKB(r.output_bytes)} (${ratio}%) → ${r.output_path}`;
     } catch (e) {
       resultEl.textContent = `変換に失敗しました: ${String(e)}`;
+      resultEl.classList.add("error");
+    } finally {
+      btn.disabled = false;
     }
   });
 
@@ -127,18 +177,31 @@ window.addEventListener("DOMContentLoaded", () => {
   });
 
   pick("#btn-batch").addEventListener("click", async () => {
+    const btn = pick<HTMLButtonElement>("#btn-batch");
+    const progressEl = pick<HTMLProgressElement>("#batch-progress");
+    const statusEl = pick<HTMLElement>("#batch-status");
     batchResultEl.textContent = "";
+    batchResultEl.classList.remove("error");
     if (batchInputs.length === 0 || !batchDirEl.value) {
       batchResultEl.textContent = "入力ファイルと出力フォルダを指定してください。";
+      batchResultEl.classList.add("error");
       return;
     }
-    batchResultEl.textContent = "変換中...";
+    btn.disabled = true;
+    progressEl.hidden = false;
+    progressEl.value = 0;
+    statusEl.textContent = `0/${batchInputs.length}件処理中...`;
+    const unlisten = await listen<BatchProgress>("batch-progress", (e) => {
+      progressEl.value = (e.payload.done / e.payload.total) * 100;
+      statusEl.textContent =
+        `${e.payload.done}/${e.payload.total}件処理中: ${e.payload.current}`;
+    });
     try {
       const r = await invoke<BatchResult>("convert_batch", {
         inputs: batchInputs,
         outputDir: batchDirEl.value,
-        format: formatEl.value,
-        quality: Number(qualityEl.value),
+        format: batchFormatEl.value,
+        quality: Number(batchQualityEl.value),
         overwrite: pick<HTMLInputElement>("#overwrite").checked,
       });
       const lines = [
@@ -146,8 +209,18 @@ window.addEventListener("DOMContentLoaded", () => {
         ...r.failed.map((f) => `失敗: ${f.input}: ${f.error}`),
       ];
       batchResultEl.textContent = lines.join("\n");
+      if (r.failed.length > 0) {
+        batchResultEl.classList.add("error");
+      }
+      statusEl.textContent = "完了";
     } catch (e) {
       batchResultEl.textContent = `一括変換に失敗しました: ${String(e)}`;
+      batchResultEl.classList.add("error");
+      statusEl.textContent = "";
+    } finally {
+      unlisten();
+      btn.disabled = false;
+      progressEl.hidden = true;
     }
   });
 
