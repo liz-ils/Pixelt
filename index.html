@@ -24,9 +24,9 @@
         <button class="nav-item active" data-target="view-convert" type="button">変換</button>
         <button class="nav-item" data-target="view-batch" type="button">一括変換</button>
         <button class="nav-item" data-target="view-mosaic" type="button">モザイク</button>
+        <button class="nav-item" data-target="view-resize" type="button">リサイズ</button>
         <button class="nav-item" data-target="view-settings" type="button">設定</button>
         <div class="nav-group">今後</div>
-        <button class="nav-item" type="button" disabled>リサイズ <span class="badge">予定</span></button>
         <button class="nav-item" type="button" disabled>透かし <span class="badge">予定</span></button>
         <button class="nav-item" type="button" disabled>メタデータ <span class="badge">予定</span></button>
       </nav>
@@ -190,6 +190,60 @@
           </div>
 
           <p id="mosaic-result" class="result"></p>
+        </section>
+
+        <section id="view-resize" class="view">
+          <h1>リサイズ</h1>
+          <p class="view-desc">幅・高さのどちらかを 0 にすると縦横比を維持して自動計算します。</p>
+
+          <div class="card">
+            <div class="card-title">入力</div>
+            <div class="row">
+              <input id="resize-input" readonly placeholder="入力ファイル..." />
+              <button id="btn-resize-input" type="button">参照</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">設定</div>
+            <div class="row">
+              <label for="resize-width">幅</label>
+              <input id="resize-width" type="number" min="0" value="1920" />
+              <label for="resize-height">高さ</label>
+              <input id="resize-height" type="number" min="0" value="0" />
+            </div>
+            <div class="row">
+              <label for="resize-format">形式</label>
+              <select id="resize-format">
+                <option value="jpeg">JPEG (.jpg)</option>
+                <option value="png">PNG (.png)</option>
+                <option value="webp">WebP (.webp)</option>
+                <option value="gif">GIF (.gif)</option>
+                <option value="bmp">BMP (.bmp)</option>
+                <option value="tiff">TIFF (.tiff)</option>
+                <option value="qoi">QOI (.qoi)</option>
+                <option value="avif">AVIF (.avif)</option>
+              </select>
+            </div>
+            <div class="row">
+              <label for="resize-quality">品質</label>
+              <input id="resize-quality" type="range" min="1" max="100" value="85" />
+              <span id="resize-quality-value">85</span>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">出力</div>
+            <div class="row">
+              <input id="resize-output" readonly placeholder="出力ファイル..." />
+              <button id="btn-resize-output" type="button">保存先</button>
+            </div>
+            <div class="row">
+              <button id="btn-resize-apply" class="primary" type="button">リサイズして保存</button>
+            </div>
+          </div>
+
+          <p id="resize-result" class="result"></p>
         </section>
 
         <section id="view-settings" class="view">
