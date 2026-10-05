@@ -368,170 +368,6 @@ window.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  function wmMode(): string {
-    return (
-      document.querySelector<HTMLInputElement>('input[name="wm-mode"]:checked')?.value ??
-      "text"
-    );
-  }
-
-  function refreshWmGroups(): void {
-    const isText = wmMode() === "text";
-    pick("#wm-text-group").hidden = !isText;
-    pick("#wm-image-group").hidden = isText;
-  }
-
-  document
-    .querySelectorAll<HTMLInputElement>('input[name="wm-mode"]')
-    .forEach((radio) => {
-      radio.addEventListener("change", refreshWmGroups);
-    });
-  refreshWmGroups();
-
-  const wmInputEl = pick<HTMLInputElement>("#wm-input");
-  const wmOutputEl = pick<HTMLInputElement>("#wm-output");
-  const wmFormatEl = pick<HTMLSelectElement>("#wm-format");
-  const wmQualityEl = pick<HTMLInputElement>("#wm-quality");
-  const wmQualityValueEl = pick<HTMLElement>("#wm-quality-value");
-  const wmResultEl = pick<HTMLElement>("#wm-result");
-  let wmManual = false;
-
-  function refreshWmOutput(): void {
-    if (!wmManual && wmInputEl.value) {
-      wmOutputEl.value = autoOutput(wmInputEl.value, "wm", formatExtension(wmFormatEl.value));
-    }
-  }
-
-  wmFormatEl.addEventListener("change", refreshWmOutput);
-
-  wmQualityEl.addEventListener("input", () => {
-    wmQualityValueEl.textContent = wmQualityEl.value;
-  });
-
-  const wmSizeEl = pick<HTMLInputElement>("#wm-size");
-  const wmSizeValueEl = pick<HTMLElement>("#wm-size-value");
-  wmSizeEl.addEventListener("input", () => {
-    wmSizeValueEl.textContent = wmSizeEl.value;
-  });
-
-  const wmScaleEl = pick<HTMLInputElement>("#wm-scale");
-  const wmScaleValueEl = pick<HTMLElement>("#wm-scale-value");
-  wmScaleEl.addEventListener("input", () => {
-    wmScaleValueEl.textContent = wmScaleEl.value;
-  });
-
-  const wmOpacityEl = pick<HTMLInputElement>("#wm-opacity");
-  const wmOpacityValueEl = pick<HTMLElement>("#wm-opacity-value");
-  wmOpacityEl.addEventListener("input", () => {
-    wmOpacityValueEl.textContent = wmOpacityEl.value;
-  });
-
-  pick("#btn-wm-input").addEventListener("click", async () => {
-    const selected = await open({
-      multiple: false,
-      filters: [{ name: "画像", extensions: INPUT_EXTENSIONS }],
-    });
-    if (typeof selected === "string") {
-      wmInputEl.value = selected;
-      wmManual = false;
-      refreshWmOutput();
-    }
-  });
-
-  pick("#btn-wm-font").addEventListener("click", async () => {
-    const selected = await open({
-      multiple: false,
-      filters: [{ name: "フォント", extensions: ["ttf", "otf"] }],
-    });
-    if (typeof selected === "string") {
-      pick<HTMLInputElement>("#wm-font").value = selected;
-    }
-  });
-
-  pick("#btn-wm-image").addEventListener("click", async () => {
-    const selected = await open({
-      multiple: false,
-      filters: [{ name: "画像", extensions: INPUT_EXTENSIONS }],
-    });
-    if (typeof selected === "string") {
-      pick<HTMLInputElement>("#wm-image").value = selected;
-    }
-  });
-
-  pick("#btn-wm-output").addEventListener("click", async () => {
-    const ext = formatExtension(wmFormatEl.value);
-    const selected = await save({
-      filters: [{ name: "画像", extensions: [ext] }],
-    });
-    if (typeof selected === "string") {
-      wmOutputEl.value = selected;
-      wmManual = true;
-    }
-  });
-
-  function hexToRgb(hex: string): [number, number, number] {
-    const m = /^#([0-9a-f]{6})$/i.exec(hex.trim());
-    if (!m) {
-      return [255, 255, 255];
-    }
-    const v = parseInt(m[1], 16);
-    return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
-  }
-
-  pick("#btn-wm-apply").addEventListener("click", async () => {
-    const btn = pick<HTMLButtonElement>("#btn-wm-apply");
-    wmResultEl.textContent = "";
-    wmResultEl.classList.remove("error");
-    if (!wmInputEl.value || !wmOutputEl.value) {
-      wmResultEl.textContent = "入力と出力を指定してください。";
-      wmResultEl.classList.add("error");
-      return;
-    }
-    const isText = wmMode() === "text";
-    const fontPath = pick<HTMLInputElement>("#wm-font").value;
-    const imagePath = pick<HTMLInputElement>("#wm-image").value;
-    const text = pick<HTMLInputElement>("#wm-text").value;
-    if ((isText && !text) || (!isText && !imagePath)) {
-      wmResultEl.textContent = "透かしの内容を指定してください。";
-      wmResultEl.classList.add("error");
-      return;
-    }
-    btn.disabled = true;
-    wmResultEl.textContent = "適用中...";
-    try {
-      const watermark = isText
-        ? {
-            kind: "text",
-            text,
-            font_path: fontPath,
-            size: Number(wmSizeEl.value),
-            color: hexToRgb(pick<HTMLInputElement>("#wm-color").value),
-          }
-        : {
-            kind: "image",
-            path: imagePath,
-            scale: Number(wmScaleEl.value) / 100,
-          };
-      const r = await invoke<ConvertResult>("apply_watermark", {
-        input: wmInputEl.value,
-        output: wmOutputEl.value,
-        format: wmFormatEl.value,
-        quality: Number(wmQualityEl.value),
-        watermark,
-        position: pick<HTMLSelectElement>("#wm-position").value,
-        margin: Math.max(0, Number(pick<HTMLInputElement>("#wm-margin").value)),
-        opacity: Number(wmOpacityEl.value) / 100,
-      });
-      wmResultEl.textContent =
-        `${r.width}x${r.height} / ${formatKB(r.input_bytes)} → ${formatKB(r.output_bytes)} → ${r.output_path}`;
-    } catch (e) {
-      wmResultEl.textContent = `透かしの適用に失敗しました: ${String(e)}`;
-      wmResultEl.classList.add("error");
-    } finally {
-      btn.disabled = false;
-    }
-  });
-
   document
     .querySelectorAll<HTMLButtonElement>(".nav-item[data-target]")
     .forEach((btn) => {
@@ -549,7 +385,8 @@ window.addEventListener("DOMContentLoaded", () => {
 
   const mosaicInputEl = pick<HTMLInputElement>("#mosaic-input");
   const mosaicOutputEl = pick<HTMLInputElement>("#mosaic-output");
-  const mosaicFormatEl = pick<HTMLSelectElement>("#mosaic-format");  const mosaicQualityEl = pick<HTMLInputElement>("#mosaic-quality");
+  const mosaicFormatEl = pick<HTMLSelectElement>("#mosaic-format");
+  const mosaicQualityEl = pick<HTMLInputElement>("#mosaic-quality");
   const mosaicQualityValueEl = pick<HTMLElement>("#mosaic-quality-value");
   const mosaicSizeEl = pick<HTMLInputElement>("#mosaic-size");
   const mosaicSizeValueEl = pick<HTMLElement>("#mosaic-size-value");
@@ -574,6 +411,13 @@ window.addEventListener("DOMContentLoaded", () => {
     throw new Error("canvas 2d context を取得できません");
   }
   const mctx: CanvasRenderingContext2D = mosaicCtx;
+
+  const mosaicTemp = document.createElement("canvas");
+  const mosaicTempCtx = mosaicTemp.getContext("2d");
+  if (!mosaicTempCtx) {
+    throw new Error("canvas 2d context を取得できません");
+  }
+  const mtemp: CanvasRenderingContext2D = mosaicTempCtx;
 
   let previewImg: HTMLImageElement | null = null;
   let previewScale = 1;
@@ -600,18 +444,30 @@ window.addEventListener("DOMContentLoaded", () => {
     if (!previewImg) {
       return;
     }
-    mctx.clearRect(0, 0, mosaicCanvas.width, mosaicCanvas.height);
+    const px = Math.max(2, Number(mosaicSizeEl.value));
+    mctx.imageSmoothingEnabled = false;
     mctx.drawImage(previewImg, 0, 0);
-    mctx.fillStyle = "rgba(52, 96, 251, 0.3)";
-    mctx.strokeStyle = "#3460fb";
-    mctx.lineWidth = 2;
     for (const r of mosaicRegions) {
-      mctx.fillRect(r.x, r.y, r.width, r.height);
-      mctx.strokeRect(r.x, r.y, r.width, r.height);
+      const x0 = Math.max(0, Math.round(r.x));
+      const y0 = Math.max(0, Math.round(r.y));
+      const w = Math.max(0, Math.round(r.width));
+      const h = Math.max(0, Math.round(r.height));
+      if (w < 2 || h < 2) {
+        continue;
+      }
+      const tw = Math.max(1, Math.ceil(w / px));
+      const th = Math.max(1, Math.ceil(h / px));
+      mosaicTemp.width = tw;
+      mosaicTemp.height = th;
+      mtemp.drawImage(mosaicCanvas, x0, y0, w, h, 0, 0, tw, th);
+      mctx.drawImage(mosaicTemp, 0, 0, tw, th, x0, y0, w, h);
     }
+    mctx.imageSmoothingEnabled = true;
     if (dragStart && dragCurrent) {
       const x = Math.min(dragStart.x, dragCurrent.x);
       const y = Math.min(dragStart.y, dragCurrent.y);
+      mctx.strokeStyle = "#3460fb";
+      mctx.lineWidth = 2;
       mctx.strokeRect(x, y, Math.abs(dragStart.x - dragCurrent.x), Math.abs(dragStart.y - dragCurrent.y));
     }
     mosaicInfoEl.textContent = `${mosaicRegions.length}件の領域を選択中`;
@@ -625,8 +481,23 @@ window.addEventListener("DOMContentLoaded", () => {
     };
   }
 
+  mosaicSizeEl.addEventListener("input", () => {
+    mosaicSizeValueEl.textContent = mosaicSizeEl.value;
+    renderMosaic();
+  });
+
+  let lastDab: { x: number; y: number } | null = null;
+
   function dab(p: { x: number; y: number }): void {
     const size = Number(mosaicSizeEl.value);
+    if (lastDab) {
+      const dx = p.x - lastDab.x;
+      const dy = p.y - lastDab.y;
+      if (dx * dx + dy * dy < (size / 4) * (size / 4)) {
+        return;
+      }
+    }
+    lastDab = p;
     mosaicRegions.push({
       x: Math.round(p.x - size / 2),
       y: Math.round(p.y - size / 2),
@@ -642,6 +513,7 @@ window.addEventListener("DOMContentLoaded", () => {
     }
     if (mosaicTool() === "brush") {
       brushing = true;
+      lastDab = null;
       dab(toPreview(e));
     } else {
       dragStart = toPreview(e);
@@ -662,10 +534,8 @@ window.addEventListener("DOMContentLoaded", () => {
   });
 
   window.addEventListener("mouseup", () => {
-    if (brushing) {
-      brushing = false;
-      return;
-    }
+    brushing = false;
+    lastDab = null;
     if (dragStart && dragCurrent) {
       const w = Math.abs(dragStart.x - dragCurrent.x);
       const h = Math.abs(dragStart.y - dragCurrent.y);
