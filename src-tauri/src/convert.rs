@@ -397,7 +397,7 @@ mod tests {
         std::fs::create_dir_all(&dir).unwrap();
         let img: ImageBuffer<Rgb<u8>, Vec<u8>> =
             ImageBuffer::from_fn(64, 48, |x, y| Rgb([(x % 256) as u8, (y % 256) as u8, 128]));
-        let path = dir.join("input.png");
+        let path = dir.join(format!("input-{:?}.png", std::thread::current().id()));
         img.save(&path).unwrap();
         path
     }
@@ -492,8 +492,9 @@ mod tests {
             .collect();
         assert_eq!(results.len(), 2);
         assert!(results.iter().all(|r| r.is_ok()));
-        assert!(out_dir.join("input.jpg").exists());
-        assert!(out_dir.join("second.jpg").exists());
+        for r in results.into_iter().flatten() {
+            assert!(std::path::Path::new(&r.output_path).exists());
+        }
         std::fs::remove_dir_all(out_dir).unwrap();
         std::fs::remove_file(second).unwrap();
     }
@@ -504,7 +505,8 @@ mod tests {
         let dir = input.parent().unwrap();
         let out_dir = dir.join("batch_skip");
         std::fs::create_dir_all(&out_dir).unwrap();
-        std::fs::copy(&input, out_dir.join("input.jpg")).unwrap();
+        let stem = input.file_stem().unwrap().to_string_lossy();
+        std::fs::copy(&input, out_dir.join(format!("{stem}.jpg"))).unwrap();
         let err = convert_one(
             input.to_str().unwrap(),
             out_dir.to_str().unwrap(),

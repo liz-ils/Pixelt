@@ -166,7 +166,7 @@ mod tests {
         std::fs::create_dir_all(&dir).unwrap();
         let img: ImageBuffer<Rgb<u8>, Vec<u8>> =
             ImageBuffer::from_fn(64, 48, |x, y| Rgb([(x % 256) as u8, (y % 256) as u8, 128]));
-        let path = dir.join("input.png");
+        let path = dir.join(format!("input-{:?}.png", std::thread::current().id()));
         img.save(&path).unwrap();
         path
     }

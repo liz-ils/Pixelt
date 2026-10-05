@@ -207,10 +207,26 @@
           <div class="card">
             <div class="card-title">設定</div>
             <div class="row">
-              <label for="resize-width">幅</label>
-              <input id="resize-width" type="number" min="0" value="1920" />
-              <label for="resize-height">高さ</label>
-              <input id="resize-height" type="number" min="0" value="0" />
+              <label><input type="radio" name="resize-mode" value="percent" checked /> 割合</label>
+              <label><input type="radio" name="resize-mode" value="size" /> 幅・高さ</label>
+            </div>
+            <div class="row" id="resize-percent-group">
+              <label for="resize-percent">割合</label>
+              <input id="resize-percent" type="range" min="1" max="400" value="50" />
+              <span id="resize-percent-value">50</span>%
+            </div>
+            <div id="resize-size-group" hidden>
+              <div class="row">
+                <label for="resize-width">幅</label>
+                <input id="resize-width" type="number" min="0" value="1920" />
+                <label for="resize-height">高さ</label>
+                <input id="resize-height" type="number" min="0" value="0" />
+              </div>
+              <div class="row">
+                <label for="resize-keep">比率維持</label>
+                <input id="resize-keep" type="checkbox" checked />
+              </div>
+              <p class="hint">0 の辺は自動計算。比率維持オフでは縦横をそのまま適用します。</p>
             </div>
             <div class="row">
               <label for="resize-format">形式</label>
@@ -248,7 +264,7 @@
 
         <section id="view-watermark" class="view">
           <h1>透かし</h1>
-          <p class="view-desc">文字または画像を重ねます。文字にはフォントファイル（TTF/OTF）を指定します。</p>
+          <p class="view-desc">文字または画像を重ねます。フォント未指定時はシステムフォントを使います。</p>
 
           <div class="card">
             <div class="card-title">入力</div>
@@ -270,7 +286,7 @@
                 <input id="wm-text" type="text" value="Pixelt" />
               </div>
               <div class="row">
-                <input id="wm-font" readonly placeholder="フォントファイル (TTF/OTF)..." />
+                <input id="wm-font" readonly placeholder="フォント (空欄でシステムフォント)..." />
                 <button id="btn-wm-font" type="button">参照</button>
               </div>
               <div class="row">
