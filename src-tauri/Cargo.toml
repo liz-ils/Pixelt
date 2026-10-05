@@ -29,6 +29,7 @@ ravif = { version = "0.11", default-features = false, features = ["threading"] }
 kamadak-exif = "0.6"
 rayon = "1"
 base64 = "0.22"
+crc32fast = "1"
 
 
 # Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration

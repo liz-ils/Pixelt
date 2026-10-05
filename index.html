@@ -25,9 +25,8 @@
         <button class="nav-item" data-target="view-batch" type="button">一括変換</button>
         <button class="nav-item" data-target="view-mosaic" type="button">モザイク</button>
         <button class="nav-item" data-target="view-resize" type="button">リサイズ</button>
+        <button class="nav-item" data-target="view-metadata" type="button">メタデータ</button>
         <button class="nav-item" data-target="view-settings" type="button">設定</button>
-        <div class="nav-group">今後</div>
-        <button class="nav-item" type="button" disabled>メタデータ <span class="badge">予定</span></button>
       </nav>
 
       <main class="content">
@@ -262,6 +261,49 @@
           </div>
 
           <p id="resize-result" class="result"></p>
+        </section>
+
+        <section id="view-metadata" class="view">
+          <h1>メタデータ</h1>
+          <p class="view-desc">PNG テキスト情報（生成AIの parameters 等）の閲覧・編集と、メタデータの削除を行います。</p>
+
+          <div class="card">
+            <div class="card-title">入力</div>
+            <div class="row">
+              <input id="meta-input" readonly placeholder="入力ファイル (PNG/JPEG)..." />
+              <button id="btn-meta-input" type="button">参照</button>
+            </div>
+            <p id="meta-format" class="hint"></p>
+          </div>
+
+          <div class="card">
+            <div class="card-title">EXIF</div>
+            <div id="meta-exif-list"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">PNG テキスト情報</div>
+            <div id="meta-entries"></div>
+            <div class="row">
+              <input id="meta-new-keyword" type="text" placeholder="新規キーワード" />
+              <button id="btn-meta-add" type="button">追加</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">出力</div>
+            <div class="row">
+              <input id="meta-output" readonly placeholder="出力ファイル..." />
+              <button id="btn-meta-output" type="button">保存先</button>
+            </div>
+            <p class="hint">初期値は入力と同じファイル（上書き）です。</p>
+            <div class="row">
+              <button id="btn-meta-save" class="primary" type="button">保存</button>
+              <button id="btn-meta-remove" type="button">メタデータ削除</button>
+            </div>
+          </div>
+
+          <p id="meta-result" class="result"></p>
         </section>
 
         <section id="view-settings" class="view">
