@@ -43,6 +43,28 @@ interface MosaicRegion {
   height: number;
 }
 
+interface ExifEntry {
+  tag: string;
+  value: string;
+}
+
+interface PngTextInfo {
+  keyword: string;
+  text: string;
+  compressed: boolean;
+}
+
+interface MetadataInfo {
+  format: string;
+  exif: ExifEntry[];
+  png_text: PngTextInfo[];
+}
+
+interface PngTextEntry {
+  keyword: string;
+  text: string;
+}
+
 const THEME_KEY = "pixelt-theme";
 const THEMES = ["dads-light", "dads-dark", "contrast"] as const;
 
@@ -368,6 +390,186 @@ window.addEventListener("DOMContentLoaded", () => {
     }
   });
 
+  const metaInputEl = pick<HTMLInputElement>("#meta-input");
+  const metaOutputEl = pick<HTMLInputElement>("#meta-output");
+  const metaFormatEl = pick<HTMLElement>("#meta-format");
+  const metaExifEl = pick<HTMLElement>("#meta-exif-list");
+  const metaEntriesEl = pick<HTMLElement>("#meta-entries");
+  const metaResultEl = pick<HTMLElement>("#meta-result");
+  let metaFormat = "";
+  let metaEntries: PngTextInfo[] = [];
+
+  function escapeHtml(s: string): string {
+    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  function renderMetaEntries(): void {
+    metaEntriesEl.innerHTML = "";
+    if (metaEntries.length === 0) {
+      metaEntriesEl.innerHTML = '<p class="hint">テキスト情報はありません。</p>';
+      return;
+    }
+    metaEntries.forEach((e, i) => {
+      const div = document.createElement("div");
+      div.className = "meta-entry";
+      div.innerHTML =
+        `<div class="meta-row"><span class="meta-tag">${escapeHtml(e.keyword)}</span>` +
+        (e.compressed ? '<span class="hint">圧縮済み（保持されます）</span>' : "") +
+        "</div>";
+      if (!e.compressed) {
+        const ta = document.createElement("textarea");
+        ta.value = e.text;
+        ta.dataset.idx = String(i);
+        div.appendChild(ta);
+      }
+      const del = document.createElement("button");
+      del.type = "button";
+      del.textContent = "削除";
+      del.addEventListener("click", () => {
+        metaEntries.splice(i, 1);
+        renderMetaEntries();
+      });
+      div.appendChild(del);
+      metaEntriesEl.appendChild(div);
+    });
+  }
+
+  function collectMetaEntries(): PngTextEntry[] {
+    const out: PngTextEntry[] = [];
+    metaEntriesEl.querySelectorAll<HTMLTextAreaElement>("textarea").forEach((ta) => {
+      const i = Number(ta.dataset.idx);
+      if (metaEntries[i] && !metaEntries[i].compressed) {
+        out.push({ keyword: metaEntries[i].keyword, text: ta.value });
+      }
+    });
+    return out;
+  }
+
+  async function loadMetadata(): Promise<void> {
+    metaResultEl.textContent = "";
+    metaResultEl.classList.remove("error");
+    if (!metaInputEl.value) {
+      return;
+    }
+    try {
+      const m = await invoke<MetadataInfo>("read_metadata", { input: metaInputEl.value });
+      metaFormat = m.format;
+      metaFormatEl.textContent = `形式: ${m.format} / EXIF ${m.exif.length}件 / テキスト ${m.png_text.length}件`;
+      metaExifEl.innerHTML = "";
+      if (m.exif.length === 0) {
+        metaExifEl.innerHTML = '<p class="hint">EXIF はありません。</p>';
+      }
+      for (const e of m.exif) {
+        const div = document.createElement("div");
+        div.className = "meta-row";
+        const tag = document.createElement("span");
+        tag.className = "meta-tag";
+        tag.textContent = e.tag;
+        const val = document.createElement("span");
+        val.className = "meta-value";
+        val.textContent = e.value;
+        div.appendChild(tag);
+        div.appendChild(val);
+        metaExifEl.appendChild(div);
+      }
+      metaEntries = m.png_text;
+      renderMetaEntries();
+    } catch (e) {
+      metaResultEl.textContent = `読取に失敗しました: ${String(e)}`;
+      metaResultEl.classList.add("error");
+    }
+  }
+
+  pick("#btn-meta-input").addEventListener("click", async () => {
+    const selected = await open({
+      multiple: false,
+      filters: [{ name: "画像", extensions: ["png", "jpg", "jpeg"] }],
+    });
+    if (typeof selected === "string") {
+      metaInputEl.value = selected;
+      metaOutputEl.value = selected;
+      await loadMetadata();
+    }
+  });
+
+  pick("#btn-meta-output").addEventListener("click", async () => {
+    const selected = await save({
+      filters: [{ name: "画像", extensions: ["png", "jpg", "jpeg"] }],
+    });
+    if (typeof selected === "string") {
+      metaOutputEl.value = selected;
+    }
+  });
+
+  pick("#btn-meta-add").addEventListener("click", () => {
+    const kw = pick<HTMLInputElement>("#meta-new-keyword").value.trim();
+    if (!kw) {
+      return;
+    }
+    metaEntries.push({ keyword: kw, text: "", compressed: false });
+    pick<HTMLInputElement>("#meta-new-keyword").value = "";
+    renderMetaEntries();
+  });
+
+  pick("#btn-meta-save").addEventListener("click", async () => {
+    const btn = pick<HTMLButtonElement>("#btn-meta-save");
+    metaResultEl.textContent = "";
+    metaResultEl.classList.remove("error");
+    if (!metaInputEl.value || !metaOutputEl.value) {
+      metaResultEl.textContent = "入力と出力を指定してください。";
+      metaResultEl.classList.add("error");
+      return;
+    }
+    if (metaFormat !== "png") {
+      metaResultEl.textContent = "テキスト編集は PNG のみ対応しています。";
+      metaResultEl.classList.add("error");
+      return;
+    }
+    btn.disabled = true;
+    metaResultEl.textContent = "保存中...";
+    try {
+      const r = await invoke<ConvertResult>("write_png_metadata", {
+        input: metaInputEl.value,
+        output: metaOutputEl.value,
+        entries: collectMetaEntries(),
+      });
+      metaResultEl.textContent = `保存しました → ${r.output_path}`;
+      await loadMetadata();
+    } catch (e) {
+      metaResultEl.textContent = `保存に失敗しました: ${String(e)}`;
+      metaResultEl.classList.add("error");
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  pick("#btn-meta-remove").addEventListener("click", async () => {
+    const btn = pick<HTMLButtonElement>("#btn-meta-remove");
+    metaResultEl.textContent = "";
+    metaResultEl.classList.remove("error");
+    if (!metaInputEl.value || !metaOutputEl.value) {
+      metaResultEl.textContent = "入力と出力を指定してください。";
+      metaResultEl.classList.add("error");
+      return;
+    }
+    btn.disabled = true;
+    metaResultEl.textContent = "削除中...";
+    try {
+      const r = await invoke<ConvertResult>("remove_metadata", {
+        input: metaInputEl.value,
+        output: metaOutputEl.value,
+      });
+      metaResultEl.textContent =
+        `削除しました / ${formatKB(r.input_bytes)} → ${formatKB(r.output_bytes)} → ${r.output_path}`;
+      await loadMetadata();
+    } catch (e) {
+      metaResultEl.textContent = `削除に失敗しました: ${String(e)}`;
+      metaResultEl.classList.add("error");
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
   document
     .querySelectorAll<HTMLButtonElement>(".nav-item[data-target]")
     .forEach((btn) => {
@@ -382,6 +584,7 @@ window.addEventListener("DOMContentLoaded", () => {
         document.getElementById(btn.dataset.target ?? "")?.classList.add("active");
       });
     });
+});
 
   const mosaicInputEl = pick<HTMLInputElement>("#mosaic-input");
   const mosaicOutputEl = pick<HTMLInputElement>("#mosaic-output");
@@ -650,4 +853,3 @@ window.addEventListener("DOMContentLoaded", () => {
       btn.disabled = false;
     }
   });
-});
