@@ -12,10 +12,10 @@ use crate::convert::{ConvertResult, OutputFormat, encode, normalize_orientation}
 
 #[derive(Debug, Clone, Copy, Deserialize)]
 pub struct MosaicRegion {
-    pub x: u32,
-    pub y: u32,
-    pub width: u32,
-    pub height: u32,
+    pub x: i32,
+    pub y: i32,
+    pub width: i32,
+    pub height: i32,
 }
 
 #[derive(Debug, Serialize)]
@@ -31,10 +31,10 @@ fn apply_mosaic_to_image(img: &mut RgbaImage, regions: &[MosaicRegion], pixel_si
     let (w, h) = (img.width(), img.height());
     let px = pixel_size.clamp(2, 128);
     for r in regions {
-        let x0 = r.x.min(w);
-        let y0 = r.y.min(h);
-        let x1 = r.x.saturating_add(r.width).min(w);
-        let y1 = r.y.saturating_add(r.height).min(h);
+        let x0 = r.x.clamp(0, w as i32) as u32;
+        let y0 = r.y.clamp(0, h as i32) as u32;
+        let x1 = x0.saturating_add(r.width.max(0) as u32).min(w);
+        let y1 = y0.saturating_add(r.height.max(0) as u32).min(h);
         if x1 <= x0 || y1 <= y0 {
             continue;
         }
@@ -207,6 +207,29 @@ mod tests {
             y: 1000,
             width: 10,
             height: 10,
+        }];
+        let r = apply_mosaic_blocking(
+            input.to_str().unwrap(),
+            output.to_str().unwrap(),
+            "jpeg",
+            90,
+            &regions,
+            8,
+        )
+        .unwrap();
+        assert_eq!((r.width, r.height), (64, 48));
+        std::fs::remove_file(output).unwrap();
+    }
+
+    #[test]
+    fn clamps_negative_region() {
+        let input = fixture_png();
+        let output = input.with_file_name("neg.jpg");
+        let regions = vec![MosaicRegion {
+            x: -3,
+            y: -3,
+            width: 20,
+            height: 20,
         }];
         let r = apply_mosaic_blocking(
             input.to_str().unwrap(),

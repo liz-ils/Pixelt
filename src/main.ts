@@ -412,6 +412,13 @@ window.addEventListener("DOMContentLoaded", () => {
   }
   const mctx: CanvasRenderingContext2D = mosaicCtx;
 
+  const mosaicTemp = document.createElement("canvas");
+  const mosaicTempCtx = mosaicTemp.getContext("2d");
+  if (!mosaicTempCtx) {
+    throw new Error("canvas 2d context を取得できません");
+  }
+  const mtemp: CanvasRenderingContext2D = mosaicTempCtx;
+
   let previewImg: HTMLImageElement | null = null;
   let previewScale = 1;
   const mosaicRegions: MosaicRegion[] = [];
@@ -437,18 +444,30 @@ window.addEventListener("DOMContentLoaded", () => {
     if (!previewImg) {
       return;
     }
-    mctx.clearRect(0, 0, mosaicCanvas.width, mosaicCanvas.height);
+    const px = Math.max(2, Number(mosaicSizeEl.value));
+    mctx.imageSmoothingEnabled = false;
     mctx.drawImage(previewImg, 0, 0);
-    mctx.fillStyle = "rgba(52, 96, 251, 0.3)";
-    mctx.strokeStyle = "#3460fb";
-    mctx.lineWidth = 2;
     for (const r of mosaicRegions) {
-      mctx.fillRect(r.x, r.y, r.width, r.height);
-      mctx.strokeRect(r.x, r.y, r.width, r.height);
+      const x0 = Math.max(0, Math.round(r.x));
+      const y0 = Math.max(0, Math.round(r.y));
+      const w = Math.max(0, Math.round(r.width));
+      const h = Math.max(0, Math.round(r.height));
+      if (w < 2 || h < 2) {
+        continue;
+      }
+      const tw = Math.max(1, Math.ceil(w / px));
+      const th = Math.max(1, Math.ceil(h / px));
+      mosaicTemp.width = tw;
+      mosaicTemp.height = th;
+      mtemp.drawImage(mosaicCanvas, x0, y0, w, h, 0, 0, tw, th);
+      mctx.drawImage(mosaicTemp, 0, 0, tw, th, x0, y0, w, h);
     }
+    mctx.imageSmoothingEnabled = true;
     if (dragStart && dragCurrent) {
       const x = Math.min(dragStart.x, dragCurrent.x);
       const y = Math.min(dragStart.y, dragCurrent.y);
+      mctx.strokeStyle = "#3460fb";
+      mctx.lineWidth = 2;
       mctx.strokeRect(x, y, Math.abs(dragStart.x - dragCurrent.x), Math.abs(dragStart.y - dragCurrent.y));
     }
     mosaicInfoEl.textContent = `${mosaicRegions.length}件の領域を選択中`;
@@ -462,8 +481,23 @@ window.addEventListener("DOMContentLoaded", () => {
     };
   }
 
+  mosaicSizeEl.addEventListener("input", () => {
+    mosaicSizeValueEl.textContent = mosaicSizeEl.value;
+    renderMosaic();
+  });
+
+  let lastDab: { x: number; y: number } | null = null;
+
   function dab(p: { x: number; y: number }): void {
     const size = Number(mosaicSizeEl.value);
+    if (lastDab) {
+      const dx = p.x - lastDab.x;
+      const dy = p.y - lastDab.y;
+      if (dx * dx + dy * dy < (size / 4) * (size / 4)) {
+        return;
+      }
+    }
+    lastDab = p;
     mosaicRegions.push({
       x: Math.round(p.x - size / 2),
       y: Math.round(p.y - size / 2),
@@ -479,6 +513,7 @@ window.addEventListener("DOMContentLoaded", () => {
     }
     if (mosaicTool() === "brush") {
       brushing = true;
+      lastDab = null;
       dab(toPreview(e));
     } else {
       dragStart = toPreview(e);
@@ -499,10 +534,8 @@ window.addEventListener("DOMContentLoaded", () => {
   });
 
   window.addEventListener("mouseup", () => {
-    if (brushing) {
-      brushing = false;
-      return;
-    }
+    brushing = false;
+    lastDab = null;
     if (dragStart && dragCurrent) {
       const w = Math.abs(dragStart.x - dragCurrent.x);
       const h = Math.abs(dragStart.y - dragCurrent.y);
