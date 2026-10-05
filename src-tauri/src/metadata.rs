@@ -9,7 +9,7 @@ use std::io::Cursor;
 
 use serde::{Deserialize, Serialize};
 
-use crate::convert::ConvertResult;
+use crate::convert::{ConvertResult, OutputFormat, encode, normalize_orientation};
 
 const PNG_MAGIC: [u8; 8] = [137, 80, 78, 71, 13, 10, 26, 10];
 
@@ -247,13 +247,50 @@ fn read_metadata_blocking(input: &str) -> Result<MetadataInfo, String> {
     Err("PNG / JPEG のみ対応しています。".to_string())
 }
 
-fn write_png_metadata_blocking(
+/// PNG テキストチャンクを書き換える。入力が PNG 以外の場合は
+/// 先に PNG へ変換してから書き込む。
+fn save_metadata_with_format_blocking(
     input: &str,
     output: &str,
+    format: &str,
+    quality: u8,
     entries: &[PngTextEntry],
 ) -> Result<ConvertResult, String> {
+    let format = OutputFormat::parse(format)?;
+    let quality = quality.clamp(1, 100);
     let bytes = std::fs::read(input).map_err(|e| format!("入力ファイルを開けません: {e}"))?;
-    let chunks = parse_png(&bytes).map_err(|e| format!("PNG の解析に失敗しました: {e}"))?;
+    let out = if format == OutputFormat::Png {
+        let png_bytes = if bytes.len() >= 8 && bytes[..8] == PNG_MAGIC {
+            bytes.clone()
+        } else {
+            let img = image::load_from_memory(&bytes)
+                .map_err(|e| format!("画像の読み込みに失敗しました: {e}"))?;
+            let img = normalize_orientation(img, &bytes);
+            encode(&img, OutputFormat::Png, quality)?
+        };
+        apply_png_text(&png_bytes, entries)?
+    } else {
+        let img = image::load_from_memory(&bytes)
+            .map_err(|e| format!("画像の読み込みに失敗しました: {e}"))?;
+        let img = normalize_orientation(img, &bytes);
+        encode(&img, format, quality)?
+    };
+    std::fs::write(output, &out).map_err(|e| format!("出力ファイルの書き込みに失敗しました: {e}"))?;
+    let img =
+        image::load_from_memory(&out).map_err(|e| format!("出力画像の検証に失敗しました: {e}"))?;
+    Ok(ConvertResult {
+        output_path: output.to_string(),
+        format: format.extension().to_string(),
+        width: img.width(),
+        height: img.height(),
+        input_bytes: bytes.len() as u64,
+        output_bytes: out.len() as u64,
+    })
+}
+
+/// PNG バイト列のテキストチャンクを entries で置換する。
+fn apply_png_text(png_bytes: &[u8], entries: &[PngTextEntry]) -> Result<Vec<u8>, String> {
+    let chunks = parse_png(png_bytes).map_err(|e| format!("PNG の解析に失敗しました: {e}"))?;
     let mut kept = Vec::new();
     let mut dropped_text = 0;
     for c in &chunks {
@@ -297,18 +334,7 @@ fn write_png_metadata_blocking(
     merged.extend(fresh);
     merged.extend(tail);
     let _ = dropped_text;
-    let out = write_png(&merged);
-    std::fs::write(output, &out).map_err(|e| format!("出力ファイルの書き込みに失敗しました: {e}"))?;
-    let img = image::load_from_memory(&out)
-        .map_err(|e| format!("出力画像の検証に失敗しました: {e}"))?;
-    Ok(ConvertResult {
-        output_path: output.to_string(),
-        format: "png".to_string(),
-        width: img.width(),
-        height: img.height(),
-        input_bytes: bytes.len() as u64,
-        output_bytes: out.len() as u64,
-    })
+    Ok(write_png(&merged))
 }
 
 /// JPEG の APPn / COM マーカーを取り除く（再圧縮なし）。
@@ -416,15 +442,19 @@ pub async fn read_metadata(input: String) -> Result<MetadataInfo, String> {
         .map_err(|e| format!("処理が中断されました: {e}"))?
 }
 
-/// PNG テキストチャンクを書き換える。
+/// メタデータを保存する。PNG 出力時はテキスト情報を保持・更新し、
+/// PNG 以外への変換時はメタデータを落として画像のみ変換する。
+#[allow(clippy::too_many_arguments)]
 #[tauri::command]
-pub async fn write_png_metadata(
+pub async fn save_metadata_with_format(
     input: String,
     output: String,
+    format: String,
+    quality: u8,
     entries: Vec<PngTextEntry>,
 ) -> Result<ConvertResult, String> {
     tauri::async_runtime::spawn_blocking(move || {
-        write_png_metadata_blocking(&input, &output, &entries)
+        save_metadata_with_format_blocking(&input, &output, &format, quality, &entries)
     })
     .await
     .map_err(|e| format!("処理が中断されました: {e}"))?
@@ -488,9 +518,11 @@ mod tests {
                 text: "日本語プロンプト".to_string(),
             },
         ];
-        let r = write_png_metadata_blocking(
+        let r = save_metadata_with_format_blocking(
             input.to_str().unwrap(),
             output.to_str().unwrap(),
+            "png",
+            85,
             &entries,
         )
         .unwrap();
@@ -540,12 +572,36 @@ mod tests {
             keyword: String::new(),
             text: "x".to_string(),
         }];
-        let err = write_png_metadata_blocking(
+        let err = save_metadata_with_format_blocking(
             input.to_str().unwrap(),
             output.to_str().unwrap(),
+            "png",
+            85,
             &entries,
         )
         .unwrap_err();
         assert!(err.contains("キーワード"));
+    }
+
+    #[test]
+    fn converts_format_while_saving() {
+        let input = fixture_png();
+        let output = input.with_file_name("converted.jpg");
+        let entries = vec![PngTextEntry {
+            keyword: "parameters".to_string(),
+            text: "x".to_string(),
+        }];
+        let r = save_metadata_with_format_blocking(
+            input.to_str().unwrap(),
+            output.to_str().unwrap(),
+            "jpeg",
+            85,
+            &entries,
+        )
+        .unwrap();
+        assert_eq!(r.format, "jpg");
+        let img = image::open(&output).unwrap();
+        assert_eq!((img.width(), img.height()), (64, 48));
+        std::fs::remove_file(output).unwrap();
     }
 }

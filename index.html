@@ -148,16 +148,20 @@
             <div class="row">
               <label><input type="radio" name="mosaic-tool" value="rect" checked /> 四角選択</label>
               <label><input type="radio" name="mosaic-tool" value="brush" /> ブラシ</label>
-              <label for="mosaic-size">粗さ</label>
-              <input id="mosaic-size" type="range" min="4" max="64" value="16" />
-              <span id="mosaic-size-value">16</span>
-              <label for="mosaic-brush">太さ</label>
-              <input id="mosaic-brush" type="range" min="4" max="256" value="48" />
-              <span id="mosaic-brush-value">48</span>
               <button id="btn-mosaic-undo" type="button">戻す</button>
               <button id="btn-mosaic-clear" type="button">全消去</button>
             </div>
-            <canvas id="mosaic-canvas"></canvas>
+            <div class="row">
+              <label for="mosaic-size">粗さ</label>
+              <input id="mosaic-size" type="range" min="4" max="64" value="16" />
+              <span id="mosaic-size-value">16</span>
+            </div>
+            <div class="row">
+              <label for="mosaic-brush">太さ</label>
+              <input id="mosaic-brush" type="range" min="4" max="256" value="48" />
+              <span id="mosaic-brush-value">48</span>
+            </div>
+            <canvas id="mosaic-canvas" hidden></canvas>
             <p id="mosaic-info" class="hint">画像を選択してください。</p>
           </div>
 
@@ -293,13 +297,31 @@
           <div class="card">
             <div class="card-title">出力</div>
             <div class="row">
+              <label for="meta-format-select">形式</label>
+              <select id="meta-format-select">
+                <option value="png">PNG (.png)</option>
+                <option value="jpeg">JPEG (.jpg)</option>
+                <option value="webp">WebP (.webp)</option>
+                <option value="gif">GIF (.gif)</option>
+                <option value="bmp">BMP (.bmp)</option>
+                <option value="tiff">TIFF (.tiff)</option>
+                <option value="qoi">QOI (.qoi)</option>
+                <option value="avif">AVIF (.avif)</option>
+              </select>
+            </div>
+            <div class="row">
+              <label for="meta-quality">品質</label>
+              <input id="meta-quality" type="range" min="1" max="100" value="85" />
+              <span id="meta-quality-value">85</span>
+            </div>
+            <div class="row">
               <input id="meta-output" readonly placeholder="出力ファイル..." />
               <button id="btn-meta-output" type="button">保存先</button>
             </div>
-            <p class="hint">初期値は入力と同じファイル（上書き）です。</p>
+            <p class="hint">初期値は入力と同じファイル（上書き）です。PNG 以外への変換時はメタデータを落とします。</p>
             <div class="row">
               <button id="btn-meta-save" class="primary" type="button">保存</button>
-              <button id="btn-meta-remove" type="button">メタデータ削除</button>
+              <button id="btn-meta-remove" class="danger" type="button">メタデータ削除</button>
             </div>
           </div>
 
