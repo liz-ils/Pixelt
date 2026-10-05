@@ -19,6 +19,9 @@
   --control-border: #767676;
   --nav-active: #e8f1fe;
   --error: #ce0000;
+  --danger: #ce0000;
+  --danger-hover: #a90000;
+  --danger-text: #ffffff;
   --success: #197a4b;
   --shadow: 0 2px 8px 1px rgba(0, 0, 0, 0.1), 0 1px 5px 0 rgba(0, 0, 0, 0.3);
 }
@@ -38,6 +41,9 @@
   --control-border: #999999;
   --nav-active: rgba(112, 150, 248, 0.2);
   --error: #ff7171;
+  --danger: #fe3939;
+  --danger-hover: #ff7171;
+  --danger-text: #000000;
   --success: #51b883;
   --shadow: 0 2px 8px 1px rgba(0, 0, 0, 0.4), 0 1px 5px 0 rgba(0, 0, 0, 0.5);
 }
@@ -57,6 +63,9 @@
   --control-border: #ffffff;
   --nav-active: #333333;
   --error: #ff9696;
+  --danger: #ffd43d;
+  --danger-hover: #ffe380;
+  --danger-text: #000000;
   --success: #9bd4b5;
   --shadow: none;
 }
@@ -223,6 +232,7 @@ body {
 
 .row label {
   min-width: 56px;
+  white-space: nowrap;
   color: var(--text-secondary);
 }
 
@@ -284,6 +294,18 @@ button.primary:not(:disabled):hover {
 button.primary:not(:disabled):active {
   background: var(--accent-active);
   border-color: var(--accent-active);
+}
+
+button.danger {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: var(--danger-text);
+  font-weight: 600;
+}
+
+button.danger:not(:disabled):hover {
+  background: var(--danger-hover);
+  border-color: var(--danger-hover);
 }
 
 input[type="range"] {

@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { open, save } from "@tauri-apps/plugin-dialog";
+import { ask, open, save } from "@tauri-apps/plugin-dialog";
 
 interface ConvertResult {
   output_path: string;
@@ -396,8 +396,14 @@ window.addEventListener("DOMContentLoaded", () => {
   const metaExifEl = pick<HTMLElement>("#meta-exif-list");
   const metaEntriesEl = pick<HTMLElement>("#meta-entries");
   const metaResultEl = pick<HTMLElement>("#meta-result");
-  let metaFormat = "";
+  const metaFormatSelectEl = pick<HTMLSelectElement>("#meta-format-select");
+  const metaQualityEl = pick<HTMLInputElement>("#meta-quality");
+  const metaQualityValueEl = pick<HTMLElement>("#meta-quality-value");
   let metaEntries: PngTextInfo[] = [];
+
+  metaQualityEl.addEventListener("input", () => {
+    metaQualityValueEl.textContent = metaQualityEl.value;
+  });
 
   function escapeHtml(s: string): string {
     return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -453,7 +459,6 @@ window.addEventListener("DOMContentLoaded", () => {
     }
     try {
       const m = await invoke<MetadataInfo>("read_metadata", { input: metaInputEl.value });
-      metaFormat = m.format;
       metaFormatEl.textContent = `形式: ${m.format} / EXIF ${m.exif.length}件 / テキスト ${m.png_text.length}件`;
       metaExifEl.innerHTML = "";
       if (m.exif.length === 0) {
@@ -494,7 +499,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
   pick("#btn-meta-output").addEventListener("click", async () => {
     const selected = await save({
-      filters: [{ name: "画像", extensions: ["png", "jpg", "jpeg"] }],
+      filters: [{ name: "画像", extensions: ["png", "jpg", "jpeg", "webp", "avif"] }],
     });
     if (typeof selected === "string") {
       metaOutputEl.value = selected;
@@ -520,18 +525,21 @@ window.addEventListener("DOMContentLoaded", () => {
       metaResultEl.classList.add("error");
       return;
     }
-    if (metaFormat !== "png") {
-      metaResultEl.textContent = "テキスト編集は PNG のみ対応しています。";
+    const entries = collectMetaEntries();
+    if (entries.length > 0 && metaFormatSelectEl.value !== "png") {
+      metaResultEl.textContent = "テキスト情報の保存は PNG 出力時のみ可能です。";
       metaResultEl.classList.add("error");
       return;
     }
     btn.disabled = true;
     metaResultEl.textContent = "保存中...";
     try {
-      const r = await invoke<ConvertResult>("write_png_metadata", {
+      const r = await invoke<ConvertResult>("save_metadata_with_format", {
         input: metaInputEl.value,
         output: metaOutputEl.value,
-        entries: collectMetaEntries(),
+        format: metaFormatSelectEl.value,
+        quality: Number(metaQualityEl.value),
+        entries,
       });
       metaResultEl.textContent = `保存しました → ${r.output_path}`;
       await loadMetadata();
@@ -550,6 +558,13 @@ window.addEventListener("DOMContentLoaded", () => {
     if (!metaInputEl.value || !metaOutputEl.value) {
       metaResultEl.textContent = "入力と出力を指定してください。";
       metaResultEl.classList.add("error");
+      return;
+    }
+    const confirmed = await ask("すべてのメタデータを削除します。よろしいですか？", {
+      title: "確認",
+      kind: "warning",
+    });
+    if (!confirmed) {
       return;
     }
     btn.disabled = true;
@@ -794,6 +809,7 @@ window.addEventListener("DOMContentLoaded", () => {
         previewImg = img;
         mosaicCanvas.width = p.width;
         mosaicCanvas.height = p.height;
+        mosaicCanvas.hidden = false;
         renderMosaic();
       };
       img.src = p.data_url;

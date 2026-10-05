@@ -4,7 +4,7 @@ mod mosaic;
 mod resize;
 
 use convert::{convert_batch, convert_image};
-use metadata::{read_metadata, remove_metadata, write_png_metadata};
+use metadata::{read_metadata, remove_metadata, save_metadata_with_format};
 use mosaic::{apply_mosaic, load_preview};
 use resize::resize_image;
 
@@ -20,7 +20,7 @@ pub fn run() {
             load_preview,
             resize_image,
             read_metadata,
-            write_png_metadata,
+            save_metadata_with_format,
             remove_metadata
         ])
         .run(tauri::generate_context!())
