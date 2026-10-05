@@ -76,9 +76,15 @@ impl Position {
     }
 }
 
-fn render_text_layer(text: &str, font_bytes: &[u8], size: f32, color: [u8; 3]) -> Result<RgbaImage, String> {
-    let font = FontRef::try_from_slice(font_bytes)
-        .map_err(|_| "フォントファイルを読み込めません（TTF/OTF を指定してください）。".to_string())?;
+fn render_text_layer(
+    text: &str,
+    font_bytes: &[u8],
+    font_index: u32,
+    size: f32,
+    color: [u8; 3],
+) -> Result<RgbaImage, String> {
+    let font = FontRef::try_from_slice_and_index(font_bytes, font_index)
+        .map_err(|_| "フォントファイルを読み込めません（TTF/OTF/TTC を指定してください）。".to_string())?;
     let scale = PxScale::from(size);
     let scaled = font.as_scaled(scale);
     let mut caret = point(0.0, scaled.ascent());
@@ -106,6 +112,37 @@ fn render_text_layer(text: &str, font_bytes: &[u8], size: f32, color: [u8; 3]) -
         }
     }
     Ok(layer)
+}
+
+/// フォントの実体を取得する。空文字なら内蔵扱いでシステムフォントを探す。
+/// `path#n` 形式で TTC 内のインデックスを指定できる。
+fn load_font_bytes(font_path: &str) -> Result<(Vec<u8>, u32), String> {
+    if font_path.trim().is_empty() {
+        // Windows 標準の日本語フォントを優先する。
+        for (path, index) in [
+            (r"C:\Windows\Fonts\msgothic.ttc", 0),
+            (r"C:\Windows\Fonts\meiryo.ttc", 0),
+            (r"C:\Windows\Fonts\arial.ttf", 0),
+        ] {
+            if std::path::Path::new(path).exists() {
+                let bytes = std::fs::read(path)
+                    .map_err(|e| format!("フォントファイルを開けません: {e}"))?;
+                return Ok((bytes, index));
+            }
+        }
+        return Err("システムフォントが見つかりません。フォントファイルを指定してください。".to_string());
+    }
+    let (path, index) = match font_path.rsplit_once('#') {
+        Some((p, n)) => (
+            p,
+            n.parse::<u32>()
+                .map_err(|_| format!("フォントのインデックス指定が不正です: {font_path}"))?,
+        ),
+        None => (font_path, 0),
+    };
+    let bytes =
+        std::fs::read(path).map_err(|e| format!("フォントファイルを開けません: {e}"))?;
+    Ok((bytes, index))
 }
 
 /// オーバーレイ画像を透明度付きで合成する。
@@ -159,9 +196,8 @@ fn apply_watermark_blocking(
             if text.trim().is_empty() {
                 return Err("透かし文字が空です。".to_string());
             }
-            let font_bytes = std::fs::read(font_path)
-                .map_err(|e| format!("フォントファイルを開けません: {e}"))?;
-            render_text_layer(text, &font_bytes, size.clamp(8.0, 512.0), *color)?
+            let (font_bytes, font_index) = load_font_bytes(font_path)?;
+            render_text_layer(text, &font_bytes, font_index, size.clamp(8.0, 512.0), *color)?
         }
         WatermarkSpec::Image { path, scale } => {
             let ov_bytes =
@@ -222,16 +258,20 @@ mod tests {
         std::fs::create_dir_all(&dir).unwrap();
         let img: ImageBuffer<Rgb<u8>, Vec<u8>> =
             ImageBuffer::from_fn(128, 96, |x, y| Rgb([(x % 256) as u8, (y % 256) as u8, 200]));
-        let path = dir.join("input.png");
+        let path = dir.join(format!("input-{:?}.png", std::thread::current().id()));
         img.save(&path).unwrap();
         path
     }
 
-    fn system_font() -> Option<std::path::PathBuf> {
-        for name in ["arial.ttf", "meiryo.ttf", "msgothic.ttc", "YuGothM.ttc"] {
+    fn system_font() -> Option<String> {
+        for (name, index) in [
+            ("msgothic.ttc", 0),
+            ("meiryo.ttc", 0),
+            ("arial.ttf", 0),
+        ] {
             let p = std::path::Path::new(r"C:\Windows\Fonts").join(name);
             if p.exists() {
-                return Some(p);
+                return Some(format!("{}#{index}", p.to_string_lossy()));
             }
         }
         None
@@ -272,15 +312,11 @@ mod tests {
             eprintln!("システムフォントが無いためスキップ");
             return;
         };
-        if font.extension().and_then(|e| e.to_str()) == Some("ttc") {
-            eprintln!("TTC のためスキップ");
-            return;
-        }
         let input = fixture_png();
         let output = input.with_file_name("text.jpg");
         let spec = WatermarkSpec::Text {
-            text: "Pixelt".to_string(),
-            font_path: font.to_string_lossy().into_owned(),
+            text: "Pixeltあ".to_string(),
+            font_path: font,
             size: 24.0,
             color: [255, 255, 255],
         };
@@ -297,6 +333,35 @@ mod tests {
         .unwrap();
         assert_eq!((r.width, r.height), (128, 96));
         std::fs::remove_file(output).unwrap();
+    }
+
+    #[test]
+    fn uses_builtin_font_when_path_is_empty() {
+        let input = fixture_png();
+        let output = input.with_file_name("builtin.jpg");
+        let spec = WatermarkSpec::Text {
+            text: "x".to_string(),
+            font_path: String::new(),
+            size: 24.0,
+            color: [0, 0, 0],
+        };
+        // システムフォントが無ければエラーメッセージを確認する。
+        match apply_watermark_blocking(
+            input.to_str().unwrap(),
+            output.to_str().unwrap(),
+            "jpeg",
+            85,
+            &spec,
+            "center",
+            0,
+            1.0,
+        ) {
+            Ok(r) => {
+                assert_eq!((r.width, r.height), (128, 96));
+                std::fs::remove_file(output).unwrap();
+            }
+            Err(e) => assert!(e.contains("システムフォント")),
+        }
     }
 
     #[test]
