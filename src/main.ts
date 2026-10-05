@@ -85,6 +85,16 @@ function formatKB(bytes: number): string {
   return `${(bytes / 1024).toFixed(1)}KB`;
 }
 
+function autoOutput(input: string, suffix: string, ext: string): string {
+  const i = Math.max(input.lastIndexOf("/"), input.lastIndexOf("\\"));
+  const dir = i >= 0 ? input.slice(0, i) : "";
+  const base = i >= 0 ? input.slice(i + 1) : input;
+  const dot = base.lastIndexOf(".");
+  const stem = dot > 0 ? base.slice(0, dot) : base;
+  const sep = input.includes("\\") ? "\\" : "/";
+  return `${dir}${dir ? sep : ""}${stem}_${suffix}.${ext}`;
+}
+
 function pick<T extends HTMLElement>(selector: string): T {
   const el = document.querySelector<T>(selector);
   if (!el) {
@@ -100,6 +110,15 @@ window.addEventListener("DOMContentLoaded", () => {
   const qualityEl = pick<HTMLInputElement>("#quality");
   const qualityValueEl = pick<HTMLElement>("#quality-value");
   const resultEl = pick<HTMLElement>("#result");
+  let convertManual = false;
+
+  function refreshConvertOutput(): void {
+    if (!convertManual && inputEl.value) {
+      outputEl.value = autoOutput(inputEl.value, "converted", formatExtension(formatEl.value));
+    }
+  }
+
+  formatEl.addEventListener("change", refreshConvertOutput);
 
   qualityEl.addEventListener("input", () => {
     qualityValueEl.textContent = qualityEl.value;
@@ -126,6 +145,8 @@ window.addEventListener("DOMContentLoaded", () => {
     });
     if (typeof selected === "string") {
       inputEl.value = selected;
+      convertManual = false;
+      refreshConvertOutput();
     }
   });
 
@@ -136,6 +157,7 @@ window.addEventListener("DOMContentLoaded", () => {
     });
     if (typeof selected === "string") {
       outputEl.value = selected;
+      convertManual = true;
     }
   });
 
@@ -214,7 +236,7 @@ window.addEventListener("DOMContentLoaded", () => {
     try {
       const r = await invoke<BatchResult>("convert_batch", {
         inputs: batchInputs,
-        output_dir: batchDirEl.value,
+        outputDir: batchDirEl.value,
         format: batchFormatEl.value,
         quality: Number(batchQualityEl.value),
         overwrite: pick<HTMLInputElement>("#overwrite").checked,
@@ -247,6 +269,44 @@ window.addEventListener("DOMContentLoaded", () => {
   const resizeWidthEl = pick<HTMLInputElement>("#resize-width");
   const resizeHeightEl = pick<HTMLInputElement>("#resize-height");
   const resizeResultEl = pick<HTMLElement>("#resize-result");
+  let resizeManual = false;
+
+  function resizeMode(): string {
+    return (
+      document.querySelector<HTMLInputElement>('input[name="resize-mode"]:checked')?.value ??
+      "percent"
+    );
+  }
+
+  function refreshResizeGroups(): void {
+    const isPercent = resizeMode() === "percent";
+    pick("#resize-percent-group").hidden = !isPercent;
+    pick("#resize-size-group").hidden = isPercent;
+  }
+
+  function refreshResizeOutput(): void {
+    if (!resizeManual && resizeInputEl.value) {
+      resizeOutputEl.value = autoOutput(
+        resizeInputEl.value,
+        "resized",
+        formatExtension(resizeFormatEl.value),
+      );
+    }
+  }
+
+  document
+    .querySelectorAll<HTMLInputElement>('input[name="resize-mode"]')
+    .forEach((radio) => {
+      radio.addEventListener("change", refreshResizeGroups);
+    });
+  refreshResizeGroups();
+  resizeFormatEl.addEventListener("change", refreshResizeOutput);
+
+  const resizePercentEl = pick<HTMLInputElement>("#resize-percent");
+  const resizePercentValueEl = pick<HTMLElement>("#resize-percent-value");
+  resizePercentEl.addEventListener("input", () => {
+    resizePercentValueEl.textContent = resizePercentEl.value;
+  });
 
   resizeQualityEl.addEventListener("input", () => {
     resizeQualityValueEl.textContent = resizeQualityEl.value;
@@ -259,6 +319,8 @@ window.addEventListener("DOMContentLoaded", () => {
     });
     if (typeof selected === "string") {
       resizeInputEl.value = selected;
+      resizeManual = false;
+      refreshResizeOutput();
     }
   });
 
@@ -269,6 +331,7 @@ window.addEventListener("DOMContentLoaded", () => {
     });
     if (typeof selected === "string") {
       resizeOutputEl.value = selected;
+      resizeManual = true;
     }
   });
 
@@ -289,8 +352,11 @@ window.addEventListener("DOMContentLoaded", () => {
         output: resizeOutputEl.value,
         format: resizeFormatEl.value,
         quality: Number(resizeQualityEl.value),
+        mode: resizeMode(),
+        percent: Number(resizePercentEl.value),
         width: Math.max(0, Number(resizeWidthEl.value)),
         height: Math.max(0, Number(resizeHeightEl.value)),
+        keepAspect: pick<HTMLInputElement>("#resize-keep").checked,
       });
       resizeResultEl.textContent =
         `${r.width}x${r.height} / ${formatKB(r.input_bytes)} → ${formatKB(r.output_bytes)} → ${r.output_path}`;
@@ -328,6 +394,15 @@ window.addEventListener("DOMContentLoaded", () => {
   const wmQualityEl = pick<HTMLInputElement>("#wm-quality");
   const wmQualityValueEl = pick<HTMLElement>("#wm-quality-value");
   const wmResultEl = pick<HTMLElement>("#wm-result");
+  let wmManual = false;
+
+  function refreshWmOutput(): void {
+    if (!wmManual && wmInputEl.value) {
+      wmOutputEl.value = autoOutput(wmInputEl.value, "wm", formatExtension(wmFormatEl.value));
+    }
+  }
+
+  wmFormatEl.addEventListener("change", refreshWmOutput);
 
   wmQualityEl.addEventListener("input", () => {
     wmQualityValueEl.textContent = wmQualityEl.value;
@@ -358,6 +433,8 @@ window.addEventListener("DOMContentLoaded", () => {
     });
     if (typeof selected === "string") {
       wmInputEl.value = selected;
+      wmManual = false;
+      refreshWmOutput();
     }
   });
 
@@ -388,6 +465,7 @@ window.addEventListener("DOMContentLoaded", () => {
     });
     if (typeof selected === "string") {
       wmOutputEl.value = selected;
+      wmManual = true;
     }
   });
 
@@ -413,7 +491,7 @@ window.addEventListener("DOMContentLoaded", () => {
     const fontPath = pick<HTMLInputElement>("#wm-font").value;
     const imagePath = pick<HTMLInputElement>("#wm-image").value;
     const text = pick<HTMLInputElement>("#wm-text").value;
-    if ((isText && (!text || !fontPath)) || (!isText && !imagePath)) {
+    if ((isText && !text) || (!isText && !imagePath)) {
       wmResultEl.textContent = "透かしの内容を指定してください。";
       wmResultEl.classList.add("error");
       return;
@@ -471,14 +549,26 @@ window.addEventListener("DOMContentLoaded", () => {
 
   const mosaicInputEl = pick<HTMLInputElement>("#mosaic-input");
   const mosaicOutputEl = pick<HTMLInputElement>("#mosaic-output");
-  const mosaicFormatEl = pick<HTMLSelectElement>("#mosaic-format");
-  const mosaicQualityEl = pick<HTMLInputElement>("#mosaic-quality");
+  const mosaicFormatEl = pick<HTMLSelectElement>("#mosaic-format");  const mosaicQualityEl = pick<HTMLInputElement>("#mosaic-quality");
   const mosaicQualityValueEl = pick<HTMLElement>("#mosaic-quality-value");
   const mosaicSizeEl = pick<HTMLInputElement>("#mosaic-size");
   const mosaicSizeValueEl = pick<HTMLElement>("#mosaic-size-value");
   const mosaicCanvas = pick<HTMLCanvasElement>("#mosaic-canvas");
   const mosaicInfoEl = pick<HTMLElement>("#mosaic-info");
   const mosaicResultEl = pick<HTMLElement>("#mosaic-result");
+  let mosaicManual = false;
+
+  function refreshMosaicOutput(): void {
+    if (!mosaicManual && mosaicInputEl.value) {
+      mosaicOutputEl.value = autoOutput(
+        mosaicInputEl.value,
+        "mosaic",
+        formatExtension(mosaicFormatEl.value),
+      );
+    }
+  }
+
+  mosaicFormatEl.addEventListener("change", refreshMosaicOutput);
   const mosaicCtx = mosaicCanvas.getContext("2d");
   if (!mosaicCtx) {
     throw new Error("canvas 2d context を取得できません");
@@ -612,11 +702,13 @@ window.addEventListener("DOMContentLoaded", () => {
       return;
     }
     mosaicInputEl.value = selected;
+    mosaicManual = false;
+    refreshMosaicOutput();
     mosaicRegions.length = 0;
     try {
       const p = await invoke<PreviewImage>("load_preview", {
         input: selected,
-        max_size: 640,
+        maxSize: 640,
       });
       previewScale = p.full_width / p.width;
       const img = new Image();
@@ -639,6 +731,7 @@ window.addEventListener("DOMContentLoaded", () => {
     });
     if (typeof selected === "string") {
       mosaicOutputEl.value = selected;
+      mosaicManual = true;
     }
   });
 
@@ -671,7 +764,7 @@ window.addEventListener("DOMContentLoaded", () => {
         format: mosaicFormatEl.value,
         quality: Number(mosaicQualityEl.value),
         regions,
-        pixel_size: Number(mosaicSizeEl.value),
+        pixelSize: Number(mosaicSizeEl.value),
       });
       mosaicResultEl.textContent =
         `${regions.length}件適用 / ${r.width}x${r.height} / ${formatKB(r.input_bytes)} → ${formatKB(r.output_bytes)} → ${r.output_path}`;
