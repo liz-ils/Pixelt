@@ -1,8 +1,10 @@
 mod convert;
+mod metadata;
 mod mosaic;
 mod resize;
 
 use convert::{convert_batch, convert_image};
+use metadata::{read_metadata, remove_metadata, write_png_metadata};
 use mosaic::{apply_mosaic, load_preview};
 use resize::resize_image;
 
@@ -16,7 +18,10 @@ pub fn run() {
             convert_batch,
             apply_mosaic,
             load_preview,
-            resize_image
+            resize_image,
+            read_metadata,
+            write_png_metadata,
+            remove_metadata
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
