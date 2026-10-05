@@ -390,6 +390,8 @@ window.addEventListener("DOMContentLoaded", () => {
   const mosaicQualityValueEl = pick<HTMLElement>("#mosaic-quality-value");
   const mosaicSizeEl = pick<HTMLInputElement>("#mosaic-size");
   const mosaicSizeValueEl = pick<HTMLElement>("#mosaic-size-value");
+  const mosaicBrushEl = pick<HTMLInputElement>("#mosaic-brush");
+  const mosaicBrushValueEl = pick<HTMLElement>("#mosaic-brush-value");
   const mosaicCanvas = pick<HTMLCanvasElement>("#mosaic-canvas");
   const mosaicInfoEl = pick<HTMLElement>("#mosaic-info");
   const mosaicResultEl = pick<HTMLElement>("#mosaic-result");
@@ -485,11 +487,14 @@ window.addEventListener("DOMContentLoaded", () => {
     mosaicSizeValueEl.textContent = mosaicSizeEl.value;
     renderMosaic();
   });
+  mosaicBrushEl.addEventListener("input", () => {
+    mosaicBrushValueEl.textContent = mosaicBrushEl.value;
+  });
 
   let lastDab: { x: number; y: number } | null = null;
 
   function dab(p: { x: number; y: number }): void {
-    const size = Number(mosaicSizeEl.value);
+    const size = Math.max(4, Number(mosaicBrushEl.value));
     if (lastDab) {
       const dx = p.x - lastDab.x;
       const dy = p.y - lastDab.y;
