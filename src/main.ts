@@ -1,6 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { ask, open, save } from "@tauri-apps/plugin-dialog";
+import { openUrl } from "@tauri-apps/plugin-opener";
+import { version as appVersion } from "../package.json";
 
 interface ConvertResult {
   output_path: string;
@@ -147,6 +149,10 @@ window.addEventListener("DOMContentLoaded", () => {
   });
 
   applyTheme(currentTheme());
+  pick<HTMLElement>("#app-version").textContent = `v${appVersion}`;
+  pick("#btn-repo").addEventListener("click", () => {
+    void openUrl("https://github.com/liz-ils/Pixelt");
+  });
   document
     .querySelectorAll<HTMLInputElement>('input[name="theme"]')
     .forEach((radio) => {
